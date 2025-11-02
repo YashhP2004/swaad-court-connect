@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Clock, 
-  MapPin, 
   Receipt, 
   ChefHat,
   CheckCircle,
@@ -49,6 +48,30 @@ const EmptyState = ({ type }: { type: 'ongoing' | 'past' }) => (
     </p>
   </motion.div>
 );
+
+const groupOrdersByRestaurant = (orders: Order[]) => {
+  const map = new Map<string, { id: string; name: string; orders: Order[] }>();
+  orders.forEach(order => {
+    order.items.forEach(item => {
+      const key = `${item.id}-${item.restaurantId || order.restaurantId || item.restaurantName}`;
+      const restaurantName = item.restaurantName || order.restaurantName;
+      if (!map.has(key)) {
+        map.set(key, {
+          id: key,
+          name: restaurantName,
+          orders: []
+        });
+      }
+      map.get(key)!.orders.push({
+        ...order,
+        restaurantId: item.restaurantId || order.restaurantId,
+        restaurantName,
+        items: [item]
+      });
+    });
+  });
+  return Array.from(map.values());
+};
 
 const OrderItemsList = ({ items }: { items: OrderItem[] }) => (
   <div className="space-y-2">
@@ -109,12 +132,6 @@ const OrderCard = ({ order }: { order: Order }) => {
                   <Calendar className="w-4 h-4" />
                   {formatDistanceToNow(order.createdAt, { addSuffix: true })}
                 </div>
-                {order.tableNumber && (
-                  <div className="flex items-center gap-1">
-                    <MapPin className="w-4 h-4" />
-                    Table {order.tableNumber}
-                  </div>
-                )}
               </div>
             </div>
             <Badge 
@@ -171,6 +188,8 @@ export default function Orders() {
 
   const ongoingOrders = getOngoingOrders(orders);
   const pastOrders = getPastOrders(orders);
+  const groupedOngoingOrders = useMemo(() => groupOrdersByRestaurant(ongoingOrders), [ongoingOrders]);
+  const groupedPastOrders = useMemo(() => groupOrdersByRestaurant(pastOrders), [pastOrders]);
 
   if (loading) {
     return (
@@ -221,18 +240,46 @@ export default function Orders() {
 
         <TabsContent value="ongoing">
           <AnimatePresence mode="wait">
-            {ongoingOrders.length === 0 ? (
+            {groupedOngoingOrders.length === 0 ? (
               <EmptyState type="ongoing" />
             ) : (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="space-y-4"
+                className="space-y-8"
               >
-                {ongoingOrders.map((order) => (
-                  <OrderCard key={order.id} order={order} />
-                ))}
+                {groupedOngoingOrders.map((group, groupIndex) => {
+                  const total = group.orders.reduce((sum, order) => sum + order.totalAmount, 0);
+                  return (
+                    <motion.div
+                      key={group.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: groupIndex * 0.05 }}
+                      className="space-y-4"
+                    >
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                        <div>
+                          <h2 className="text-2xl font-semibold">{group.name}</h2>
+                          <p className="text-sm text-muted-foreground">
+                            {group.orders.length} order{group.orders.length !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-sm text-muted-foreground block">Total Value</span>
+                          <span className="text-lg font-semibold">₹{total.toFixed(2)}</span>
+                        </div>
+                      </div>
+                      <div className="space-y-4">
+                        {group.orders.map((order) => (
+                          <OrderCard key={order.id} order={order} />
+                        ))}
+                      </div>
+                      {groupIndex < groupedOngoingOrders.length - 1 && <Separator />}
+                    </motion.div>
+                  );
+                })}
               </motion.div>
             )}
           </AnimatePresence>
@@ -240,18 +287,46 @@ export default function Orders() {
 
         <TabsContent value="past">
           <AnimatePresence mode="wait">
-            {pastOrders.length === 0 ? (
+            {groupedPastOrders.length === 0 ? (
               <EmptyState type="past" />
             ) : (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="space-y-4"
+                className="space-y-8"
               >
-                {pastOrders.map((order) => (
-                  <OrderCard key={order.id} order={order} />
-                ))}
+                {groupedPastOrders.map((group, groupIndex) => {
+                  const total = group.orders.reduce((sum, order) => sum + order.totalAmount, 0);
+                  return (
+                    <motion.div
+                      key={group.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: groupIndex * 0.05 }}
+                      className="space-y-4"
+                    >
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                        <div>
+                          <h2 className="text-2xl font-semibold">{group.name}</h2>
+                          <p className="text-sm text-muted-foreground">
+                            {group.orders.length} order{group.orders.length !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-sm text-muted-foreground block">Total Value</span>
+                          <span className="text-lg font-semibold">₹{total.toFixed(2)}</span>
+                        </div>
+                      </div>
+                      <div className="space-y-4">
+                        {group.orders.map((order) => (
+                          <OrderCard key={order.id} order={order} />
+                        ))}
+                      </div>
+                      {groupIndex < groupedPastOrders.length - 1 && <Separator />}
+                    </motion.div>
+                  );
+                })}
               </motion.div>
             )}
           </AnimatePresence>
