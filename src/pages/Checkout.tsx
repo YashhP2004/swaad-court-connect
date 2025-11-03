@@ -76,7 +76,9 @@ export default function Checkout() {
                 unitPrice: item.price,
                 totalPrice: item.totalPrice,
                 image: item.image,
-                category: item.category || 'Food'
+                category: item.category || 'Food',
+                restaurantId: item.restaurantId,
+                restaurantName: item.restaurantName
               })),
               pricing: {
                 subtotal: totalAmount,

@@ -9,7 +9,8 @@ import {
   onSnapshot,
   Timestamp,
   orderBy,
-  addDoc
+  addDoc,
+  arrayUnion
 } from 'firebase/firestore';
 import { db } from './firebase-config';
 
@@ -119,19 +120,22 @@ export function getVendorOrdersRealtime(vendorId: string, callback: (orders: any
   console.log('🔥 getVendorOrdersRealtime called with vendorId:', vendorId);
 
   const ordersRef = collection(db, 'orders');
-  let q = query(
-    ordersRef,
-    where('restaurantId', '==', vendorId)
-  );
+  // Fetch all orders and filter in memory for orders containing items from this vendor
+  let q = query(ordersRef);
 
   return onSnapshot(
     q,
     (snapshot) => {
       console.log('📦 onSnapshot triggered, docs count:', snapshot.docs.length);
-      const orders = snapshot.docs.map(doc => ({
+      let orders = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
+
+      // Filter orders that have at least one item from this vendor's restaurant
+      orders = orders.filter(order =>
+        order.items && order.items.some((item: any) => item.restaurantId === vendorId)
+      );
 
       // Sort in memory to avoid composite index requirement
       orders.sort((a, b) => {
@@ -140,7 +144,7 @@ export function getVendorOrdersRealtime(vendorId: string, callback: (orders: any
         return bTime - aTime; // Descending order (newest first)
       });
 
-      console.log('✅ Calling callback with orders:', orders.length);
+      console.log('✅ Calling callback with filtered orders:', orders.length);
       callback(orders);
     },
     (error) => {
@@ -155,26 +159,51 @@ export function getVendorOrdersRealtime(vendorId: string, callback: (orders: any
 export async function updateOrderStatus(orderId: string, status: string, vendorId: string): Promise<void> {
   try {
     const orderRef = doc(db, 'orders', orderId);
+    const vendorStatus = status as string;
+    const statusMap: Record<string, string> = {
+      pending: 'Placed',
+      accepted: 'Confirmed',
+      preparing: 'Preparing',
+      ready: 'Ready to Serve',
+      collected: 'Served',
+      completed: 'Completed',
+      cancelled: 'Cancelled'
+    };
+
+    const userStatus = statusMap[vendorStatus] || 'Placed';
+    const timestamp = Timestamp.now();
+    const statusHistoryEntry = {
+      status: userStatus,
+      timestamp,
+      note: `Vendor updated to ${vendorStatus}`
+    } as const;
+
     await updateDoc(orderRef, {
-      status: status,
-      updatedAt: Timestamp.now(),
-      [`statusHistory.${status}`]: Timestamp.now()
+      status: userStatus,
+      vendorStatus,
+      updatedAt: timestamp,
+      statusHistory: arrayUnion(statusHistoryEntry)
     });
 
-    // Create notification for customer
     const orderSnap = await getDoc(orderRef);
     if (orderSnap.exists()) {
       const orderData = orderSnap.data();
+      const userOrdersRef = doc(db, `users/${orderData.userId}/orders`, orderId);
+      await updateDoc(userOrdersRef, {
+        status: userStatus,
+        vendorStatus,
+        updatedAt: timestamp,
+        statusHistory: arrayUnion(statusHistoryEntry)
+      }).catch(() => {});
 
-      // Create notification for customer
       await addDoc(collection(db, 'notifications'), {
         userId: orderData.userId,
         type: 'order_status_update',
         title: 'Order Status Updated',
-        message: `Your order #${orderId.slice(-6)} is now ${status}`,
+        message: `Your order #${orderId.slice(-6)} is now ${userStatus}`,
         orderId: orderId,
         isRead: false,
-        createdAt: Timestamp.now()
+        createdAt: timestamp
       });
     }
   } catch (error) {

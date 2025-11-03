@@ -30,7 +30,8 @@ import { useAuth } from '@/context/auth-context';
 import { 
   getVendorOrdersRealtime, 
   updateOrderStatus,
-  getVendorProfile
+  getVendorProfile,
+  VendorOrderStatus
 } from '@/lib/firebase';
 
 interface Order {
@@ -46,7 +47,8 @@ interface Order {
     customizations?: string[];
   }>;
   totalAmount: number;
-  status: 'pending' | 'accepted' | 'preparing' | 'ready' | 'collected' | 'cancelled';
+  status: VendorOrderStatus;
+  vendorStatus: VendorOrderStatus;
   paymentStatus: 'pending' | 'completed' | 'failed';
   orderType: 'dine-in' | 'takeaway';
   tableNumber?: string;
@@ -104,6 +106,8 @@ export default function OrdersManagement() {
           console.log('📦 OrdersManagement: Received orders:', ordersData.length);
           const formattedOrders = ordersData.map(order => ({
             ...order,
+            status: (order.vendorStatus as VendorOrderStatus) || 'pending',
+            vendorStatus: (order.vendorStatus as VendorOrderStatus) || 'pending',
             customerName: order.userDetails?.name || 'Unknown Customer',
             customerPhone: order.userDetails?.phone || '',
             createdAt: order.createdAt?.toDate ? order.createdAt.toDate() : new Date(order.createdAt),
@@ -134,7 +138,7 @@ export default function OrdersManagement() {
     let filtered = orders;
 
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(order => order.status === statusFilter);
+      filtered = filtered.filter(order => order.vendorStatus === statusFilter);
     }
 
     if (searchQuery) {
@@ -148,7 +152,7 @@ export default function OrdersManagement() {
     setFilteredOrders(filtered);
   }, [orders, statusFilter, searchQuery]);
 
-  const handleStatusUpdate = async (orderId: string, newStatus: string) => {
+  const handleStatusUpdate = async (orderId: string, newStatus: VendorOrderStatus) => {
     if (!user?.uid) return;
 
     try {
@@ -161,7 +165,7 @@ export default function OrdersManagement() {
     }
   };
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: VendorOrderStatus) => {
     switch (status) {
       case 'pending':
         return <Clock className="w-4 h-4 text-yellow-500" />;
@@ -173,54 +177,59 @@ export default function OrdersManagement() {
         return <Package className="w-4 h-4 text-green-500" />;
       case 'collected':
         return <CheckCircle className="w-4 h-4 text-green-600" />;
+      case 'completed':
+        return <CheckCircle className="w-4 h-4 text-emerald-600" />;
       case 'cancelled':
         return <XCircle className="w-4 h-4 text-red-500" />;
-      default:
-        return <Clock className="w-4 h-4 text-gray-500" />;
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: VendorOrderStatus) => {
     const variants = {
       pending: 'secondary',
       accepted: 'default',
       preparing: 'secondary',
       ready: 'default',
       collected: 'default',
+      completed: 'default',
       cancelled: 'destructive'
     } as const;
 
     return (
-      <Badge variant={variants[status as keyof typeof variants] || 'secondary'} className="text-xs">
+      <Badge variant={variants[status] || 'secondary'} className="text-xs capitalize">
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </Badge>
     );
   };
 
-  const getNextStatus = (currentStatus: string): string | null => {
-    const statusFlow = {
-      pending: 'accepted',
-      accepted: 'preparing',
-      preparing: 'ready',
-      ready: 'collected'
-    } as const;
-
-    return statusFlow[currentStatus as keyof typeof statusFlow] || null;
+  const statusFlow: Record<VendorOrderStatus, VendorOrderStatus | null> = {
+    pending: 'accepted',
+    accepted: 'preparing',
+    preparing: 'ready',
+    ready: 'collected',
+    collected: 'completed',
+    completed: null,
+    cancelled: null
   };
 
-  const canUpdateStatus = (status: string): boolean => {
-    return ['pending', 'accepted', 'preparing', 'ready'].includes(status);
+  const getNextStatus = (currentStatus: VendorOrderStatus): VendorOrderStatus | null => {
+    return statusFlow[currentStatus];
+  };
+
+  const canUpdateStatus = (status: VendorOrderStatus): boolean => {
+    return statusFlow[status] !== null;
   };
 
   const getOrderStats = () => {
-    const stats = {
+    return {
       total: orders.length,
-      pending: orders.filter(o => o.status === 'pending').length,
-      preparing: orders.filter(o => o.status === 'preparing').length,
-      ready: orders.filter(o => o.status === 'ready').length,
-      completed: orders.filter(o => o.status === 'collected').length
+      pending: orders.filter(o => o.vendorStatus === 'pending').length,
+      accepted: orders.filter(o => o.vendorStatus === 'accepted').length,
+      preparing: orders.filter(o => o.vendorStatus === 'preparing').length,
+      ready: orders.filter(o => o.vendorStatus === 'ready').length,
+      collected: orders.filter(o => o.vendorStatus === 'collected').length,
+      completed: orders.filter(o => o.vendorStatus === 'completed').length
     };
-    return stats;
   };
 
   const stats = getOrderStats();
@@ -343,6 +352,7 @@ export default function OrdersManagement() {
             <SelectItem value="preparing">Preparing</SelectItem>
             <SelectItem value="ready">Ready</SelectItem>
             <SelectItem value="collected">Collected</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
             <SelectItem value="cancelled">Cancelled</SelectItem>
           </SelectContent>
         </Select>
@@ -379,8 +389,8 @@ export default function OrdersManagement() {
                         </div>
                         
                         <div className="flex items-center gap-2">
-                          {getStatusIcon(order.status)}
-                          {getStatusBadge(order.status)}
+                          {getStatusIcon(order.vendorStatus)}
+                          {getStatusBadge(order.vendorStatus)}
                         </div>
                       </div>
                       
@@ -445,12 +455,12 @@ export default function OrdersManagement() {
                       </Button>
                       
                       {/* Quick Status Dropdown - ALWAYS VISIBLE */}
-                      {!['collected', 'cancelled'].includes(order.status) && (
+                      {!['completed', 'cancelled'].includes(order.vendorStatus) && (
                         <div className="space-y-2">
                           <label className="text-xs font-medium text-gray-700">Update Status:</label>
                           <Select 
-                            value={order.status} 
-                            onValueChange={(newStatus) => handleStatusUpdate(order.id, newStatus)}
+                            value={order.vendorStatus} 
+                            onValueChange={(newStatus) => handleStatusUpdate(order.id, newStatus as VendorOrderStatus)}
                           >
                             <SelectTrigger className="w-full">
                               <SelectValue />
@@ -461,6 +471,7 @@ export default function OrdersManagement() {
                               <SelectItem value="preparing">Preparing</SelectItem>
                               <SelectItem value="ready">Ready</SelectItem>
                               <SelectItem value="collected">Collected</SelectItem>
+                              <SelectItem value="completed">Completed</SelectItem>
                               <SelectItem value="cancelled">Cancelled</SelectItem>
                             </SelectContent>
                           </Select>
@@ -468,7 +479,7 @@ export default function OrdersManagement() {
                       )}
                       
                       {/* Status Update Buttons */}
-                      {order.status === 'pending' && (
+                      {order.vendorStatus === 'pending' && (
                         <>
                           <Button
                             onClick={() => handleStatusUpdate(order.id, 'accepted')}
@@ -488,7 +499,7 @@ export default function OrdersManagement() {
                         </>
                       )}
                       
-                      {order.status === 'accepted' && (
+                      {order.vendorStatus === 'accepted' && (
                         <Button
                           onClick={() => handleStatusUpdate(order.id, 'preparing')}
                           className="gap-2 w-full bg-orange-600 hover:bg-orange-700 text-white shadow-md"
@@ -498,7 +509,7 @@ export default function OrdersManagement() {
                         </Button>
                       )}
                       
-                      {order.status === 'preparing' && (
+                      {order.vendorStatus === 'preparing' && (
                         <Button
                           onClick={() => handleStatusUpdate(order.id, 'ready')}
                           className="gap-2 w-full bg-green-600 hover:bg-green-700 text-white shadow-md"
@@ -508,7 +519,7 @@ export default function OrdersManagement() {
                         </Button>
                       )}
                       
-                      {order.status === 'ready' && (
+                      {order.vendorStatus === 'ready' && (
                         <Button
                           onClick={() => handleStatusUpdate(order.id, 'collected')}
                           className="gap-2 w-full bg-blue-600 hover:bg-blue-700 text-white shadow-md"
@@ -518,7 +529,17 @@ export default function OrdersManagement() {
                         </Button>
                       )}
                       
-                      {['accepted', 'preparing', 'ready'].includes(order.status) && (
+                      {order.vendorStatus === 'collected' && (
+                        <Button
+                          onClick={() => handleStatusUpdate(order.id, 'completed')}
+                          className="gap-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-md"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          Mark Completed
+                        </Button>
+                      )}
+                      
+                      {['accepted', 'preparing', 'ready', 'collected'].includes(order.vendorStatus) && (
                         <Button
                           variant="outline"
                           onClick={() => handleStatusUpdate(order.id, 'cancelled')}
@@ -529,9 +550,9 @@ export default function OrdersManagement() {
                         </Button>
                       )}
                       
-                      {['collected', 'cancelled'].includes(order.status) && (
+                      {['completed', 'cancelled'].includes(order.vendorStatus) && (
                         <div className="text-xs text-center text-gray-500 py-2 bg-gray-50 rounded">
-                          Order {order.status}
+                          Order {order.vendorStatus}
                         </div>
                       )}
                     </div>
@@ -656,19 +677,19 @@ export default function OrdersManagement() {
                 <div className="flex items-center gap-3 mb-4">
                   <span className="text-sm text-gray-600">Current Status:</span>
                   <div className="flex items-center gap-2">
-                    {getStatusIcon(selectedOrder.status)}
-                    {getStatusBadge(selectedOrder.status)}
+                    {getStatusIcon(selectedOrder.vendorStatus)}
+                    {getStatusBadge(selectedOrder.vendorStatus)}
                   </div>
                 </div>
                 
                 {/* Quick Status Dropdown in Modal */}
-                {!['collected', 'cancelled'].includes(selectedOrder.status) && (
+                {!['completed', 'cancelled'].includes(selectedOrder.vendorStatus) && (
                   <div className="mb-4">
                     <label className="text-sm font-medium text-gray-700 mb-2 block">Change Status To:</label>
                     <Select 
-                      value={selectedOrder.status} 
+                      value={selectedOrder.vendorStatus} 
                       onValueChange={(newStatus) => {
-                        handleStatusUpdate(selectedOrder.id, newStatus);
+                        handleStatusUpdate(selectedOrder.id, newStatus as VendorOrderStatus);
                         setSelectedOrder(null);
                       }}
                     >
@@ -681,6 +702,7 @@ export default function OrdersManagement() {
                         <SelectItem value="preparing">Preparing</SelectItem>
                         <SelectItem value="ready">Ready</SelectItem>
                         <SelectItem value="collected">Collected</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
                         <SelectItem value="cancelled">Cancelled</SelectItem>
                       </SelectContent>
                     </Select>
@@ -688,7 +710,7 @@ export default function OrdersManagement() {
                 )}
                 
                 <div className="grid grid-cols-2 gap-3">
-                  {selectedOrder.status === 'pending' && (
+                  {selectedOrder.vendorStatus === 'pending' && (
                     <>
                       <Button
                         onClick={() => {
@@ -714,7 +736,7 @@ export default function OrdersManagement() {
                     </>
                   )}
                   
-                  {selectedOrder.status === 'accepted' && (
+                  {selectedOrder.vendorStatus === 'accepted' && (
                     <Button
                       onClick={() => {
                         handleStatusUpdate(selectedOrder.id, 'preparing');
@@ -727,7 +749,7 @@ export default function OrdersManagement() {
                     </Button>
                   )}
                   
-                  {selectedOrder.status === 'preparing' && (
+                  {selectedOrder.vendorStatus === 'preparing' && (
                     <Button
                       onClick={() => {
                         handleStatusUpdate(selectedOrder.id, 'ready');
@@ -740,7 +762,7 @@ export default function OrdersManagement() {
                     </Button>
                   )}
                   
-                  {selectedOrder.status === 'ready' && (
+                  {selectedOrder.vendorStatus === 'ready' && (
                     <Button
                       onClick={() => {
                         handleStatusUpdate(selectedOrder.id, 'collected');
@@ -753,7 +775,20 @@ export default function OrdersManagement() {
                     </Button>
                   )}
                   
-                  {['accepted', 'preparing', 'ready'].includes(selectedOrder.status) && (
+                  {selectedOrder.vendorStatus === 'collected' && (
+                    <Button
+                      onClick={() => {
+                        handleStatusUpdate(selectedOrder.id, 'completed');
+                        setSelectedOrder(null);
+                      }}
+                      className="gap-2 col-span-2 bg-emerald-600 hover:bg-emerald-700"
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                      Mark as Completed
+                    </Button>
+                  )}
+                  
+                  {['accepted', 'preparing', 'ready', 'collected'].includes(selectedOrder.vendorStatus) && (
                     <Button
                       variant="outline"
                       onClick={() => {
@@ -767,9 +802,9 @@ export default function OrdersManagement() {
                     </Button>
                   )}
                   
-                  {['collected', 'cancelled'].includes(selectedOrder.status) && (
+                  {['completed', 'cancelled'].includes(selectedOrder.vendorStatus) && (
                     <div className="col-span-2 text-center text-sm text-gray-500 py-2">
-                      This order is {selectedOrder.status} and cannot be updated.
+                      This order is {selectedOrder.vendorStatus} and cannot be updated.
                     </div>
                   )}
                 </div>

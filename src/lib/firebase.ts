@@ -17,7 +17,8 @@ import {
   Timestamp,
   increment,
   limit,
-  limitToLast
+  limitToLast,
+  arrayUnion
 } from 'firebase/firestore';
 import {
   getAuth,
@@ -151,6 +152,7 @@ export interface PhoneAuthResult {
 
 // Order Status Types
 export type OrderStatus = 'Placed' | 'Confirmed' | 'Preparing' | 'Ready to Serve' | 'Served' | 'Completed' | 'Cancelled';
+export type VendorOrderStatus = 'pending' | 'accepted' | 'preparing' | 'ready' | 'collected' | 'completed' | 'cancelled';
 
 export interface OrderItem {
   id: string;
@@ -161,6 +163,8 @@ export interface OrderItem {
   image?: string;
   category?: string;
   customizations?: string[];
+  restaurantId?: string;
+  restaurantName?: string;
 }
 
 export interface Order {
@@ -179,6 +183,7 @@ export interface Order {
   };
   totalAmount: number;
   status: OrderStatus;
+  vendorStatus?: VendorOrderStatus;
   statusHistory?: Array<{ status: OrderStatus; timestamp: string | Date | Timestamp; note?: string }>;
   dineIn?: { tableNumber?: string; seatingArea?: string; guestCount?: number };
   timing?: {
@@ -614,11 +619,17 @@ async function verifyAdminAccess(userId: string): Promise<boolean> {
 export async function createOrder(orderData: Partial<Order>): Promise<string> {
   const orderId = `order_${Date.now()}`;
   const orderNumber = `SC${String(Math.floor(Math.random() * 999999)).padStart(6, '0')}`;
+  const items = (orderData.items || []).map(item => ({
+    ...item,
+    restaurantId: item.restaurantId || orderData.restaurantId,
+    restaurantName: item.restaurantName || orderData.restaurantName
+  }));
 
   const order: Order = {
     id: orderId,
     orderNumber,
     status: 'Placed',
+    vendorStatus: 'pending',
     statusHistory: [{
       status: 'Placed',
       timestamp: Timestamp.now(),
@@ -650,7 +661,7 @@ export async function createOrder(orderData: Partial<Order>): Promise<string> {
       seatingArea: 'Main Hall',
       guestCount: 1
     },
-    items: orderData.items || [],
+    items,
     createdAt: Timestamp.now(),
     updatedAt: Timestamp.now(),
     source: 'mobile_app',
@@ -674,6 +685,8 @@ export async function createOrder(orderData: Partial<Order>): Promise<string> {
       restaurantImage: orderData.restaurantImage,
       totalAmount: orderData.pricing?.totalAmount || 0,
       status: 'Placed',
+      vendorStatus: 'pending',
+      statusHistory: order.statusHistory,
       tableNumber: orderData.dineIn?.tableNumber,
       itemsCount: orderData.items?.length || 0,
       itemsSummary: orderData.items?.slice(0, 2).map(item =>
@@ -740,7 +753,6 @@ export function getUserOrders(userId: string, callback: (orders: Order[]) => voi
           seatingArea: data.dineIn?.seatingArea || 'Main Hall',
           guestCount: data.dineIn?.guestCount || 1
         },
-        // Ensure required fields exist
         orderNumber: data.orderNumber || `SC${Date.now()}`,
         statusHistory: data.statusHistory || [{
           status: data.status || 'Placed',
@@ -751,22 +763,22 @@ export function getUserOrders(userId: string, callback: (orders: Order[]) => voi
           method: 'Cash',
           status: 'Pending'
         },
-        // Ensure totalAmount is available at root level for UI compatibility
         totalAmount: data.pricing?.totalAmount || data.totalAmount || 0,
-        // Ensure tableNumber is available at root level for UI compatibility
         tableNumber: data.dineIn?.tableNumber || data.tableNumber || '1',
-        // Ensure items array exists
-        items: data.items || [],
-        // Ensure required string fields
+        items: (data.items || []).map((item: any) => ({
+          ...item,
+          restaurantId: item.restaurantId || data.restaurantId,
+          restaurantName: item.restaurantName || data.restaurantName
+        })),
         userId: data.userId || userId,
         restaurantId: data.restaurantId || '',
         restaurantName: data.restaurantName || 'Unknown Restaurant',
-        status: data.status || 'Placed'
+        status: data.status || 'Placed',
+        vendorStatus: (data.vendorStatus as VendorOrderStatus | undefined) || 'pending'
       } as Order;
 
       return processedOrder;
     })
-    // Sort by createdAt desc client-side
     .sort((a, b) => {
       const getTime = (timestamp: any): number => {
         if (timestamp instanceof Date) return timestamp.getTime();
@@ -1133,29 +1145,54 @@ export function getVendorOrdersRealtime(vendorId: string, callback: (orders: any
 }
 
 // Update order status for vendors
-export async function updateOrderStatus(orderId: string, status: string, vendorId: string): Promise<void> {
+export async function updateOrderStatus(orderId: string, status: VendorOrderStatus, vendorId: string): Promise<void> {
   try {
     const orderRef = doc(db, 'orders', orderId);
+    const statusMap: Record<VendorOrderStatus, OrderStatus> = {
+      pending: 'Placed',
+      accepted: 'Confirmed',
+      preparing: 'Preparing',
+      ready: 'Ready to Serve',
+      collected: 'Served',
+      completed: 'Completed',
+      cancelled: 'Cancelled'
+    };
+
+    const userStatus = statusMap[status] || 'Placed';
+    const timestamp = Timestamp.now();
+
+    const statusHistoryEntry = {
+      status: userStatus,
+      timestamp,
+      note: `Vendor updated to ${status}`
+    } as const;
+
     await updateDoc(orderRef, {
-      status: status,
-      updatedAt: Timestamp.now(),
-      [`statusHistory.${status}`]: Timestamp.now()
+      status: userStatus,
+      vendorStatus: status,
+      updatedAt: timestamp,
+      statusHistory: arrayUnion(statusHistoryEntry)
     });
 
-    // Create notification for customer
     const orderSnap = await getDoc(orderRef);
     if (orderSnap.exists()) {
       const orderData = orderSnap.data();
+      const userOrdersRef = doc(db, `users/${orderData.userId}/orders`, orderId);
+      await updateDoc(userOrdersRef, {
+        status: userStatus,
+        vendorStatus: status,
+        updatedAt: timestamp,
+        statusHistory: arrayUnion(statusHistoryEntry)
+      }).catch(() => {});
 
-      // Create notification for customer
       await addDoc(collection(db, 'notifications'), {
         userId: orderData.userId,
         type: 'order_status_update',
         title: 'Order Status Updated',
-        message: `Your order #${orderId.slice(-6)} is now ${status}`,
+        message: `Your order #${orderId.slice(-6)} is now ${userStatus}`,
         orderId: orderId,
         isRead: false,
-        createdAt: Timestamp.now()
+        createdAt: timestamp
       });
     }
   } catch (error) {
