@@ -58,7 +58,18 @@ export default function AdminPanel() {
   const [activeSection, setActiveSection] = useState<AdminSection>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [dashboardLoading, setDashboardLoading] = useState(false);
-  const [dashboardStats, setDashboardStats] = useState({
+  type DashboardStats = {
+    totalVendors: number;
+    pendingApprovals: number;
+    totalCustomers: number;
+    totalOrders: number;
+    totalRevenue: number;
+    activeOrders: number;
+    monthlyGrowth: number;
+    platformCommission: number;
+  };
+
+  const defaultDashboardStats: DashboardStats = {
     totalVendors: 0,
     pendingApprovals: 0,
     totalCustomers: 0,
@@ -67,7 +78,9 @@ export default function AdminPanel() {
     activeOrders: 0,
     monthlyGrowth: 0,
     platformCommission: 0
-  });
+  };
+
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats>(defaultDashboardStats);
 
   useEffect(() => {
     console.log('AdminPanel useEffect - user:', user, 'authLoading:', authLoading);
@@ -97,7 +110,21 @@ export default function AdminPanel() {
     setDashboardLoading(true);
     try {
       const stats = await getAdminDashboardStats();
-      setDashboardStats(stats);
+      const totalVendors = stats?.users?.vendors ?? 0;
+      const activeRestaurants = stats?.restaurants?.active ?? 0;
+      const totalRestaurants = stats?.restaurants?.total ?? 0;
+      const pendingApprovals = Math.max(totalRestaurants - activeRestaurants, 0);
+
+      setDashboardStats({
+        totalVendors,
+        pendingApprovals,
+        totalCustomers: stats?.users?.customers ?? stats?.users?.total ?? 0,
+        totalOrders: stats?.orders?.total ?? 0,
+        totalRevenue: stats?.orders?.totalRevenue ?? 0,
+        activeOrders: stats?.orders?.pending ?? 0,
+        monthlyGrowth: stats?.users?.monthlyGrowth ?? 0,
+        platformCommission: stats?.orders?.platformCommission ?? 0
+      });
     } catch (error) {
       console.error('Error loading dashboard stats:', error);
       toast.error('Failed to load dashboard statistics');
