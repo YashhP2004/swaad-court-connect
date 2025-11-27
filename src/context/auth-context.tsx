@@ -1,13 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { 
-  onAuthStateChanged, 
-  signOut, 
+import {
+  onAuthStateChanged,
+  signOut,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPhoneNumber,
   RecaptchaVerifier,
   ConfirmationResult,
-  User 
+  User
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
@@ -84,11 +84,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           updatedAt: new Date(),
         }).filter(([_, value]) => value !== undefined)
       );
-      
+
       console.log('AuthContext: Creating profile with data:', profileData);
       await setDoc(doc(db, 'users', firebaseUser.uid), profileData);
       console.log('AuthContext: Profile created successfully');
-      return profileData as UserData;
+      return profileData as unknown as UserData;
     } catch (error) {
       console.error('AuthContext: Error creating user profile:', error);
       throw error;
@@ -150,44 +150,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     console.log('AuthContext: Setting up auth state listener');
-    
+
     const handleAuthStateChange = async (firebaseUser: User | null) => {
       console.log('AuthContext: Auth state changed, firebaseUser:', firebaseUser?.uid || 'null');
-      
+
       // Don't set loading if we're already initialized and just switching users
       if (!isInitialized) {
         setIsLoading(true);
       }
-      
+
       try {
         if (firebaseUser) {
           console.log('AuthContext: Fetching profile for user:', firebaseUser.uid);
-          
-          // Check if user is admin first
-          const isAdmin = await checkAdminCredentials(firebaseUser.email || '');
-          
-          if (isAdmin) {
-            // For admin users, get profile from admin collection
-            console.log('AuthContext: User is admin, fetching from admin collection');
-            const adminDoc = await getDoc(doc(db, 'admins', firebaseUser.email || ''));
-            if (adminDoc.exists()) {
-              const adminData = adminDoc.data();
-              const adminProfile = {
-                uid: firebaseUser.uid,
-                email: firebaseUser.email || '',
-                name: adminData.name || 'Admin',
-                role: 'admin',
-                addresses: []
-              };
-              console.log('AuthContext: Setting admin profile:', adminProfile);
-              setUser(adminProfile);
-              return;
-            }
-          }
-          
-          // For regular users, get profile from users collection
+
+          // For all users, get profile from users collection first
+          // This avoids permission errors from trying to read admins collection
           let userProfile = await getUserProfile(firebaseUser.uid);
-          
+
           if (!userProfile) {
             console.log('AuthContext: Auto-creating Firestore profile for auth user:', firebaseUser.uid);
             userProfile = await createUserProfile(firebaseUser, {
@@ -197,7 +176,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               addresses: []
             });
           }
-          
+
+          // If the user profile says they are an admin, we can trust it
+          if (userProfile.role === 'admin') {
+            try {
+              const adminDoc = await getDoc(doc(db, 'admins', firebaseUser.email || ''));
+              if (adminDoc.exists()) {
+                console.log('AuthContext: Fetched additional admin data');
+                // Merge admin data if needed, or just keep userProfile
+              }
+            } catch (e) {
+              console.log('AuthContext: Could not fetch admin specific data (optional)', e);
+            }
+          }
+
           console.log('AuthContext: Setting user profile:', userProfile);
           setUser(userProfile);
         } else {
@@ -254,11 +246,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     checkAdminCredentials,
   };
 
-  console.log('AuthContext: Providing context:', { 
-    hasUser: !!user, 
-    isLoading, 
+  console.log('AuthContext: Providing context:', {
+    hasUser: !!user,
+    isLoading,
     isAuthenticated: !!user,
-    isInitialized 
+    isInitialized
   });
 
   return (

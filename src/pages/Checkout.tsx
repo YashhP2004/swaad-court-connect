@@ -19,7 +19,7 @@ export default function Checkout() {
   const navigate = useNavigate();
   const { getTotalPrice, items, clearCart } = useCart();
   const { user, isAuthenticated, isLoading } = useAuth();
-  
+
   const totalAmount = getTotalPrice();
   const taxes = (totalAmount * 0.05).toFixed(2); // 5% tax
   const finalAmount = (parseFloat(totalAmount.toString()) + parseFloat(taxes)).toFixed(2);
@@ -28,8 +28,8 @@ export default function Checkout() {
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       toast.error('Please log in to complete your order');
-      navigate('/login', { 
-        state: { 
+      navigate('/login', {
+        state: {
           from: '/checkout',
           message: 'Please log in to complete your order and track your purchases'
         }
@@ -64,11 +64,11 @@ export default function Checkout() {
             // Create order in Firestore with user information
             const orderData = {
               userId: user.uid,
-              userEmail: user.email || '',
-              userName: user.name || 'Customer',
+              userDetails: {
+                name: user.name || 'Customer'
+              },
               restaurantId: items[0]?.restaurantId || 'swaad_court_main',
               restaurantName: items[0]?.restaurantName || 'Swaad Court',
-              restaurantImage: items[0]?.restaurantImage || '',
               items: items.map(item => ({
                 id: item.id,
                 name: item.name,
@@ -76,7 +76,6 @@ export default function Checkout() {
                 unitPrice: item.price,
                 totalPrice: item.totalPrice,
                 image: item.image,
-                category: item.category || 'Food',
                 restaurantId: item.restaurantId,
                 restaurantName: item.restaurantName
               })),
@@ -89,7 +88,7 @@ export default function Checkout() {
               },
               payment: {
                 method: 'Razorpay',
-                status: 'Completed',
+                status: 'Completed' as const,
                 transactionId: response.razorpay_payment_id,
                 paidAt: new Date().toISOString()
               },
@@ -102,18 +101,19 @@ export default function Checkout() {
               source: 'mobile_app'
             };
 
-            const orderId = await createOrder(orderData);
-            console.log('Order created successfully:', orderId);
+            const groupId = await createOrder(orderData);
+            console.log('Orders created successfully, group ID:', groupId);
 
             toast.success('Order placed successfully!');
 
             // Clear cart and redirect to success page
             clearCart();
-            navigate('/order-success', { 
-              state: { 
+            navigate('/order-success', {
+              state: {
                 paymentId: response.razorpay_payment_id,
-                orderId: orderId,
-                amount: finalAmount
+                orderId: groupId, // Passing groupId as orderId for display
+                amount: finalAmount,
+                isGroupOrder: true
               }
             });
           } catch (error) {
@@ -121,8 +121,8 @@ export default function Checkout() {
             toast.error('Order creation failed, but payment was successful');
             // Still redirect to success page even if order creation fails
             clearCart();
-            navigate('/order-success', { 
-              state: { 
+            navigate('/order-success', {
+              state: {
                 paymentId: response.razorpay_payment_id,
                 orderId: response.razorpay_order_id,
                 amount: finalAmount
@@ -268,8 +268,8 @@ export default function Checkout() {
                   </div>
                 </div>
 
-                <Button 
-                  className="w-full" 
+                <Button
+                  className="w-full"
                   size="lg"
                   onClick={initializeRazorpay}
                 >

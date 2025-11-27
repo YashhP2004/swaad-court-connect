@@ -20,137 +20,120 @@ import { Order, OrderStatus, VendorOrderStatus } from '../types';
 
 // Order Management Functions
 export async function createOrder(orderData: Partial<Order>): Promise<string> {
-    const orderId = `order_${Date.now()}`;
-    const orderNumber = `SC${String(Math.floor(Math.random() * 999999)).padStart(6, '0')}`;
-    const items = (orderData.items || []).map(item => ({
-        ...item,
-        restaurantId: item.restaurantId || orderData.restaurantId,
-        restaurantName: item.restaurantName || orderData.restaurantName
-    }));
+    const groupId = `group_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const paymentId = orderData.payment?.transactionId || `pay_${Date.now()}`;
+    const timestamp = Timestamp.now();
 
-    const restaurantAggregates = items.reduce<Record<string, { restaurantName: string; itemCount: number; totalAmount: number }>>((acc, item) => {
-        const key = item.restaurantId || orderData.restaurantId || '';
-        if (!key) {
-            return acc;
-        }
-        if (!acc[key]) {
-            acc[key] = {
-                restaurantName: item.restaurantName || orderData.restaurantName || '',
-                itemCount: 0,
-                totalAmount: 0
+    // Group items by restaurant
+    const itemsByRestaurant = (orderData.items || []).reduce((acc, item) => {
+        const restId = item.restaurantId || 'unknown';
+        if (!acc[restId]) {
+            acc[restId] = {
+                restaurantName: item.restaurantName || 'Unknown Restaurant',
+                items: [],
+                subtotal: 0
             };
         }
-        const quantity = typeof item.quantity === 'number' ? item.quantity : 1;
-        const itemTotal = typeof item.totalPrice === 'number'
-            ? item.totalPrice
-            : (item.price || 0) * quantity;
-        acc[key].itemCount += quantity;
-        acc[key].totalAmount += itemTotal;
-        if (!acc[key].restaurantName && item.restaurantName) {
-            acc[key].restaurantName = item.restaurantName;
-        }
+        acc[restId].items.push(item);
+        acc[restId].subtotal += item.totalPrice || 0;
         return acc;
-    }, {});
+    }, {} as Record<string, { restaurantName: string; items: any[]; subtotal: number }>);
 
-    const restaurantIds = Object.keys(restaurantAggregates);
-    const restaurantBreakdown = restaurantIds.map((restaurantId) => {
-        const aggregate = restaurantAggregates[restaurantId];
-        return {
-            restaurantId,
-            restaurantName: aggregate.restaurantName,
-            itemCount: aggregate.itemCount,
-            totalAmount: Math.round(aggregate.totalAmount * 100) / 100
-        };
-    });
+    const createdOrderIds: string[] = [];
 
-    const defaultRestaurantId = orderData.restaurantId || restaurantIds[0] || '';
-    const defaultRestaurantName =
-        orderData.restaurantName ||
-        restaurantBreakdown.find(entry => entry.restaurantId === defaultRestaurantId)?.restaurantName ||
-        '';
+    // Create an order for each restaurant
+    for (const [restaurantId, data] of Object.entries(itemsByRestaurant)) {
+        const orderId = `order_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+        const orderNumber = `SC${String(Math.floor(Math.random() * 999999)).padStart(6, '0')}`;
 
-    const order: Order = {
-        id: orderId,
-        orderNumber,
-        status: 'Placed',
-        vendorStatus: 'pending',
-        statusHistory: [{
-            status: 'Placed',
-            timestamp: Timestamp.now(),
-            note: 'Order received'
-        }],
-        timing: {
-            orderPlaced: Timestamp.now(),
-            estimatedReady: Timestamp.fromMillis(Timestamp.now().toMillis() + 25 * 60000),
-            actualReady: null,
-            servedAt: null,
-            completedAt: null
-        },
-        payment: {
-            method: 'Cash',
-            status: 'Pending',
-            transactionId: null,
-            paidAt: null
-        },
-        pricing: {
-            subtotal: 0,
-            taxes: 0,
-            deliveryFee: 0,
-            discount: 0,
-            totalAmount: 0
-        },
-        totalAmount: 0,
-        dineIn: {
-            tableNumber: '1',
-            seatingArea: 'Main Hall',
-            guestCount: 1
-        },
-        restaurantIds,
-        restaurantBreakdown,
-        items,
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
-        source: 'mobile_app',
-        userId: '',
-        restaurantId: defaultRestaurantId,
-        restaurantName: defaultRestaurantName,
-        ...orderData
-    };
+        const taxes = Math.round(data.subtotal * 0.05); // 5% tax
+        const totalAmount = data.subtotal + taxes; // No delivery fee for now
 
-    // Create in main orders collection
-    await setDoc(doc(db, 'orders', orderId), order);
-
-    // Create in user's subcollection for faster queries
-    if (orderData.userId) {
-        const userOrderRef = doc(db, `users/${orderData.userId}/orders`, orderId);
-        await setDoc(userOrderRef, {
-            orderId,
+        const order: Order = {
+            id: orderId,
+            groupId,
+            paymentId,
             orderNumber,
-            restaurantId: defaultRestaurantId,
-            restaurantName: defaultRestaurantName,
-            restaurantImage: orderData.restaurantImage,
-            restaurantIds,
-            restaurantBreakdown,
-            totalAmount: orderData.pricing?.totalAmount || 0,
             status: 'Placed',
             vendorStatus: 'pending',
-            statusHistory: order.statusHistory,
-            tableNumber: orderData.dineIn?.tableNumber,
-            itemsCount: (orderData.items || []).length,
-            itemsSummary: (orderData.items || []).slice(0, 2).map(item =>
-                `${item.name}${item.quantity > 1 ? ` x${item.quantity}` : ''}`
-            ).join(', ') || '',
-            createdAt: Timestamp.now(),
-            estimatedReady: order.timing?.estimatedReady
-        });
+            statusHistory: [{
+                status: 'Placed',
+                timestamp: timestamp,
+                note: 'Order received'
+            }],
+            timing: {
+                orderPlaced: timestamp,
+                estimatedReady: Timestamp.fromMillis(timestamp.toMillis() + 25 * 60000),
+                actualReady: null,
+                servedAt: null,
+                completedAt: null
+            },
+            payment: {
+                ...(orderData.payment || {}),
+                method: orderData.payment?.method || 'Cash',
+                status: orderData.payment?.status || 'Pending',
+                transactionId: paymentId,
+                paidAt: orderData.payment?.paidAt || null
+            },
+            pricing: {
+                subtotal: data.subtotal,
+                taxes: taxes,
+                deliveryFee: 0,
+                discount: 0,
+                totalAmount: totalAmount
+            },
+            totalAmount: totalAmount,
+            dineIn: orderData.dineIn || {
+                tableNumber: '1',
+                seatingArea: 'Main Hall',
+                guestCount: 1
+            },
+            restaurantIds: [restaurantId],
+            restaurantBreakdown: [{
+                restaurantId,
+                restaurantName: data.restaurantName,
+                itemCount: data.items.length,
+                totalAmount: totalAmount
+            }],
+            items: data.items,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+            source: 'mobile_app',
+            userId: orderData.userId || '',
+            restaurantId: restaurantId,
+            restaurantName: data.restaurantName,
+            userDetails: orderData.userDetails || { name: 'Customer' }
+        };
 
-        // Update user stats immediately when order is placed
-        const loyaltyPointsEarned = Math.floor((orderData.pricing?.totalAmount || 0) * 0.1); // 10% of order value
-        await updateUserOrderStats(orderData.userId, orderData.pricing?.totalAmount || 0, loyaltyPointsEarned);
+        // Create in main orders collection
+        await setDoc(doc(db, 'orders', orderId), order);
+
+        // Create in user's subcollection for faster queries
+        if (orderData.userId) {
+            const userOrderRef = doc(db, `users/${orderData.userId}/orders`, orderId);
+            await setDoc(userOrderRef, {
+                ...order,
+                itemsSummary: data.items.slice(0, 2).map(item =>
+                    `${item.name}${item.quantity > 1 ? ` x${item.quantity}` : ''}`
+                ).join(', ')
+            });
+        }
+
+        createdOrderIds.push(orderId);
+        console.log(`Order created: ${orderId} for restaurant: ${restaurantId}`);
     }
 
-    console.log(`Order created: ${orderId} for user: ${orderData.userId}`);
-    return orderId;
+    // Update user stats with total amount
+    if (orderData.userId) {
+        const totalOrderAmount = Object.values(itemsByRestaurant).reduce((sum, data) => {
+            return sum + data.subtotal + Math.round(data.subtotal * 0.05);
+        }, 0);
+
+        const loyaltyPointsEarned = Math.floor(totalOrderAmount * 0.1);
+        await updateUserOrderStats(orderData.userId, totalOrderAmount, loyaltyPointsEarned);
+    }
+
+    return groupId;
 };
 
 export function getUserOrders(userId: string, callback: (orders: Order[]) => void): (() => void) {
@@ -436,7 +419,7 @@ export async function getAllOrdersForAdmin(status?: string, limitCount: number =
 
         ordersQuery = query(ordersQuery, orderBy('createdAt', 'desc'), limit(limitCount));
         const snapshot = await getDocs(ordersQuery);
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        return snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) }));
     } catch (error) {
         console.error('Error getting all orders for admin:', error);
         throw error;

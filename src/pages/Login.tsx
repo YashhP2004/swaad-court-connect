@@ -40,8 +40,6 @@ type LoginStep = 'phone-input' | 'otp-verification';
 type AuthMode = 'login' | 'signup';
 
 export default function Login() {
-  // Using imported functions directly to avoid type conflicts with useAuth wrappers
-  // const { signInWithEmail, signUpWithEmail, sendOTP, verifyOTP, createUserProfile, getUserProfile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -312,34 +310,18 @@ export default function Login() {
       if (authMode === 'login') {
         user = await signInWithEmail(email, password);
 
-        // For admin tab, check admin credentials first
+        // For admin tab, check admin credentials
         if (activeTab === 'admin') {
-          const { checkAdminCredentials } = await import('@/lib/firebase');
-          const isAdmin = await checkAdminCredentials(email);
+          const userProfile = await getUserProfile(user.uid);
 
-          if (!isAdmin) {
-            // Sign out the user since they don't have admin privileges
-            await import('@/lib/firebase').then(({ auth }) => auth.signOut());
-            toast.error('Access denied. This account does not have admin privileges.');
-            setIsLoading(false);
-            return;
-          }
-
-          // Get admin profile from users collection
-          const usersRef = collection(db, 'users');
-          const adminQuery = query(usersRef, where('email', '==', email), where('role', '==', 'admin'));
-          const adminSnapshot = await getDocs(adminQuery);
-
-          if (!adminSnapshot.empty) {
-            const adminDoc = adminSnapshot.docs[0];
-            const adminData = adminDoc.data();
+          if (userProfile && userProfile.role === 'admin') {
             user.role = 'admin';
-            user.name = adminData.name || 'Admin';
-            user.adminProfile = adminData;
+            user.name = userProfile.name || 'Admin';
+            user.adminProfile = userProfile;
           } else {
-            // Sign out if profile not found
+            // Not an admin or no profile found
             await import('@/lib/firebase').then(({ auth }) => auth.signOut());
-            toast.error('Admin profile not found. Please contact system administrator.');
+            toast.error('Access denied. You do not have admin privileges.');
             setIsLoading(false);
             return;
           }

@@ -1,4 +1,5 @@
-import { Timestamp, ConfirmationResult } from 'firebase/firestore';
+import { Timestamp } from 'firebase/firestore';
+import { ConfirmationResult } from 'firebase/auth';
 
 // User Role Types
 export type UserRole = 'customer' | 'vendor' | 'admin';
@@ -162,6 +163,8 @@ export interface Order {
   notes?: string;
   source?: string;
   orderNumber?: string;
+  groupId?: string; // To link multiple vendor orders from a single checkout
+  paymentId?: string; // Shared payment transaction ID
   userDetails?: {
     name: string;
   };

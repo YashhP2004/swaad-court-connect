@@ -22,9 +22,9 @@ export default function OrderSuccess() {
             <div className="flex justify-center">
               <CheckCircle2 className="h-16 w-16 text-green-500" />
             </div>
-            
+
             <h1 className="text-2xl font-bold">Order Successful!</h1>
-            
+
             <p className="text-muted-foreground">
               Thank you for your order. Your payment has been processed successfully.
             </p>
@@ -35,8 +35,8 @@ export default function OrderSuccess() {
                 <span className="font-medium">{paymentId}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Order ID:</span>
-                <span className="font-medium">{orderId}</span>
+                <span className="text-muted-foreground">Order Reference:</span>
+                <span className="font-medium text-xs">{orderId}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Amount Paid:</span>
@@ -45,14 +45,14 @@ export default function OrderSuccess() {
             </div>
 
             <div className="space-y-3 pt-4">
-              <Button 
-                className="w-full" 
-                onClick={() => navigate('/orders')}
+              <Button
+                className="w-full"
+                onClick={() => navigate('/profile')}
               >
-                View Orders
+                View My Orders
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="w-full"
                 onClick={() => navigate('/')}
               >
