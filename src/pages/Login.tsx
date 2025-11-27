@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { 
-  Mail, 
-  Phone, 
-  Lock, 
-  Eye, 
+import {
+  Mail,
+  Phone,
+  Lock,
+  Eye,
   EyeOff,
   User,
   Store,
@@ -22,27 +22,29 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useAuth } from '@/context/auth-context';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { 
-  sendOTP, 
-  verifyOTP, 
-  signInWithEmail, 
+import {
+  sendOTP,
+  verifyOTP,
+  signInWithEmail,
   signUpWithEmail,
   clearRecaptchaVerifier,
   createUserProfile,
   getUserProfile,
-  UserRole 
+  UserRole
 } from '@/lib/firebase';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { setPersistence, browserSessionPersistence, browserLocalPersistence } from 'firebase/auth';
+import { db, auth } from '@/lib/firebase';
 
 type LoginStep = 'phone-input' | 'otp-verification';
 type AuthMode = 'login' | 'signup';
 
 export default function Login() {
-  const { signInWithEmail, signUpWithEmail, sendOTP, verifyOTP, createUserProfile, getUserProfile } = useAuth();
+  // Using imported functions directly to avoid type conflicts with useAuth wrappers
+  // const { signInWithEmail, signUpWithEmail, sendOTP, verifyOTP, createUserProfile, getUserProfile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   // Get redirect info from location state
   const from = location.state?.from || '/';
   const redirectMessage = location.state?.message;
@@ -51,7 +53,7 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>('login');
-  
+
   // Customer (Phone) Auth State
   const [loginStep, setLoginStep] = useState<LoginStep>('phone-input');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -60,24 +62,24 @@ export default function Login() {
   const [otpCountdown, setOtpCountdown] = useState(0);
   const [phoneAuthAvailable, setPhoneAuthAvailable] = useState(true);
   const [customerLoginMethod, setCustomerLoginMethod] = useState<'phone' | 'email'>('phone');
-  
+
   // Email/Password Auth State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  
+
   // Redirect after successful login
   const handleSuccessfulLogin = (user: any) => {
     console.log('Login successful, user role:', user?.role);
-    
+
     // Show success message
     toast.success('Login successful!');
-    
+
     // Show redirect message if provided
     if (redirectMessage) {
       toast.info(redirectMessage);
     }
-    
+
     // Role-based redirection with fallback to 'from' parameter
     if (user?.role === 'admin' || activeTab === 'admin') {
       navigate('/admin-panel');
@@ -106,6 +108,27 @@ export default function Login() {
       clearRecaptchaVerifier();
     };
   }, []);
+
+  // Set auth persistence based on active tab
+  useEffect(() => {
+    const updatePersistence = async () => {
+      try {
+        if (activeTab === 'vendor') {
+          // Vendor sessions only last until the browser/tab is closed
+          await setPersistence(auth, browserSessionPersistence);
+          console.log('Auth persistence set to SESSION for vendor');
+        } else {
+          // Other roles persist across browser restarts
+          await setPersistence(auth, browserLocalPersistence);
+          console.log('Auth persistence set to LOCAL for', activeTab);
+        }
+      } catch (error) {
+        console.error('Error setting auth persistence:', error);
+      }
+    };
+
+    updatePersistence();
+  }, [activeTab]);
 
   // Clear reCAPTCHA when switching away from customer tab
   useEffect(() => {
@@ -146,7 +169,7 @@ export default function Login() {
     try {
       const formattedPhone = formatPhoneNumber(phoneNumber);
       console.log('Attempting to send OTP to:', formattedPhone);
-      
+
       const confirmation = await sendOTP(formattedPhone);
       setConfirmationResult(confirmation);
       setLoginStep('otp-verification');
@@ -154,7 +177,7 @@ export default function Login() {
       toast.success('OTP sent successfully!');
     } catch (error: any) {
       console.error('Error sending OTP:', error);
-      
+
       // If phone auth is not configured, offer email alternative
       if (error.message?.includes('not properly configured') || error.message?.includes('invalid-app-credential')) {
         setPhoneAuthAvailable(false);
@@ -177,7 +200,7 @@ export default function Login() {
     setIsLoading(true);
     try {
       const user = await verifyOTP(confirmationResult, otp);
-      
+
       // Check if user profile exists, create if not
       let userProfile = await getUserProfile(user.uid);
       if (!userProfile) {
@@ -200,7 +223,7 @@ export default function Login() {
 
   const handleCustomerEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email || !password) {
       toast.error('Please fill in all fields');
       return;
@@ -214,10 +237,10 @@ export default function Login() {
     setIsLoading(true);
     try {
       let user;
-      
+
       if (authMode === 'login') {
         user = await signInWithEmail(email, password);
-        
+
         // Always check if user profile exists in Firestore, create if not
         let userProfile = await getUserProfile(user.uid);
         if (!userProfile) {
@@ -254,7 +277,7 @@ export default function Login() {
       handleSuccessfulLogin(user);
     } catch (error: any) {
       console.error('Authentication error:', error);
-      
+
       // Handle specific Firebase Auth errors
       if (error.code === 'auth/user-not-found') {
         toast.error('No account found with this email. Please sign up first.');
@@ -276,7 +299,7 @@ export default function Login() {
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email || !password) {
       toast.error('Please fill in all fields');
       return;
@@ -285,15 +308,15 @@ export default function Login() {
     setIsLoading(true);
     try {
       let user;
-      
+
       if (authMode === 'login') {
         user = await signInWithEmail(email, password);
-        
+
         // For admin tab, check admin credentials first
         if (activeTab === 'admin') {
           const { checkAdminCredentials } = await import('@/lib/firebase');
           const isAdmin = await checkAdminCredentials(email);
-          
+
           if (!isAdmin) {
             // Sign out the user since they don't have admin privileges
             await import('@/lib/firebase').then(({ auth }) => auth.signOut());
@@ -301,12 +324,12 @@ export default function Login() {
             setIsLoading(false);
             return;
           }
-          
+
           // Get admin profile from users collection
           const usersRef = collection(db, 'users');
           const adminQuery = query(usersRef, where('email', '==', email), where('role', '==', 'admin'));
           const adminSnapshot = await getDocs(adminQuery);
-          
+
           if (!adminSnapshot.empty) {
             const adminDoc = adminSnapshot.docs[0];
             const adminData = adminDoc.data();
@@ -342,19 +365,19 @@ export default function Login() {
           setIsLoading(false);
           return;
         }
-        
+
         user = await signUpWithEmail(email, password);
         await createUserProfile(user, {
           role: activeTab,
           name: name,
           email: email,
-          ...(activeTab === 'vendor' && { 
+          ...(activeTab === 'vendor' && {
             businessName: name,
             status: 'pending' // Vendors need admin approval
           })
         });
         user.role = activeTab;
-        
+
         if (activeTab === 'vendor') {
           toast.success('Vendor account created! Your application is pending admin approval.');
         } else {
@@ -365,7 +388,7 @@ export default function Login() {
       handleSuccessfulLogin(user);
     } catch (error: any) {
       console.error('Authentication error:', error);
-      
+
       if (error.code === 'auth/user-not-found') {
         toast.error('No account found with this email. Please sign up first.');
       } else if (error.code === 'auth/wrong-password') {
@@ -417,7 +440,7 @@ export default function Login() {
               {authMode === 'login' ? 'Sign In' : 'Create Account'}
             </CardTitle>
           </CardHeader>
-          
+
           <CardContent>
             {/* User Type Tabs */}
             <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as UserRole)} className="w-full mb-6">
@@ -506,10 +529,10 @@ export default function Login() {
                         </div>
                       )}
 
-                      <Button 
+                      <Button
                         onClick={handleSendOTP}
-                        variant="food" 
-                        size="lg" 
+                        variant="food"
+                        size="lg"
                         className="w-full ripple-effect"
                         disabled={isLoading}
                       >
@@ -553,10 +576,10 @@ export default function Login() {
                           </InputOTP>
                         </div>
 
-                        <Button 
+                        <Button
                           onClick={handleVerifyOTP}
-                          variant="food" 
-                          size="lg" 
+                          variant="food"
+                          size="lg"
                           className="w-full ripple-effect"
                           disabled={isLoading || otp.length !== 6}
                         >
@@ -641,10 +664,10 @@ export default function Login() {
                       </div>
                     </div>
 
-                    <Button 
-                      type="submit" 
-                      variant="food" 
-                      size="lg" 
+                    <Button
+                      type="submit"
+                      variant="food"
+                      size="lg"
                       className="w-full ripple-effect"
                       disabled={isLoading}
                     >
@@ -721,10 +744,10 @@ export default function Login() {
                     </div>
                   )}
 
-                  <Button 
-                    type="submit" 
-                    variant="food" 
-                    size="lg" 
+                  <Button
+                    type="submit"
+                    variant="food"
+                    size="lg"
                     className="w-full ripple-effect"
                     disabled={isLoading}
                   >
@@ -783,10 +806,10 @@ export default function Login() {
                     </p>
                   </div>
 
-                  <Button 
-                    type="submit" 
-                    variant="food" 
-                    size="lg" 
+                  <Button
+                    type="submit"
+                    variant="food"
+                    size="lg"
                     className="w-full ripple-effect"
                     disabled={isLoading}
                   >
@@ -819,8 +842,8 @@ export default function Login() {
             {/* Forgot Password Link */}
             {authMode === 'login' && activeTab !== 'customer' && (
               <div className="text-center mt-4">
-                <Link 
-                  to="/forgot-password" 
+                <Link
+                  to="/forgot-password"
                   className="text-sm text-primary hover:underline"
                 >
                   Forgot password?
