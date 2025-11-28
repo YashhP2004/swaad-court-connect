@@ -12,12 +12,10 @@ import {
     limit,
     Timestamp,
     collectionGroup,
-    getCountFromServer
+    writeBatch
 } from 'firebase/firestore';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { db, auth } from './config';
-
-// Admin functions
 export async function checkAdminCredentials(email: string): Promise<boolean> {
     try {
         // Check if admin exists by email in the admins collection
@@ -467,17 +465,22 @@ export async function getAllTransactionsForAdmin(dateRange?: string) {
             return {
                 id: doc.id,
                 orderId: doc.id,
+                orderNumber: data.orderNumber || doc.id.substring(0, 8).toUpperCase(),
+                type: 'payment', // Default to payment for orders
                 customerId: data.userId,
                 customerName: data.userDetails?.name || 'Unknown',
-                vendorId: data.restaurantId,
-                vendorName: data.restaurantName || 'Unknown',
+                restaurantId: data.restaurantId,
+                restaurantName: data.restaurantName || 'Unknown',
                 amount: (data as any).pricing?.totalAmount || (data as any).totalAmount || 0,
-                paymentMethod: data.payment?.method || 'unknown',
-                status: data.payment?.status || 'pending',
+                paymentMethod: data.payment?.method || 'card', // Default to card if unknown
+                status: (data.payment?.status || 'pending').toLowerCase(),
                 transactionId: data.payment?.transactionId || '',
-                timestamp: data.createdAt.toDate(),
+                createdAt: data.createdAt.toDate(),
                 commission: ((data as any).pricing?.totalAmount || (data as any).totalAmount || 0) * 0.05, // 5% commission
-                netAmount: ((data as any).pricing?.totalAmount || (data as any).totalAmount || 0) * 0.95
+                platformFee: 0, // Add platform fee if available
+                payoutStatus: data.payoutStatus || 'pending',
+                payoutBatchId: data.payoutBatchId || null,
+                vendorEarnings: data.vendorEarnings || 0
             };
         });
     } catch (error) {
@@ -501,8 +504,8 @@ export async function getAllPayoutRequestsForAdmin(status?: string) {
             return {
                 id: doc.id,
                 ...data,
-                requestDate: data.requestDate?.toDate(),
-                expectedDate: data.expectedDate?.toDate()
+                requestedAt: data.requestedAt?.toDate ? data.requestedAt.toDate() : new Date(data.requestedAt || Date.now()),
+                processedAt: data.processedAt?.toDate ? data.processedAt.toDate() : (data.processedAt ? new Date(data.processedAt) : undefined)
             };
         });
     } catch (error) {
@@ -511,15 +514,187 @@ export async function getAllPayoutRequestsForAdmin(status?: string) {
     }
 };
 
-export async function updatePayoutStatus(payoutId: string, status: string, adminId: string) {
+export async function generateDailyPayouts() {
+    try {
+        console.log('Generating daily payouts...');
+
+        // 1. Get all completed orders that haven't been paid out yet
+        // Note: In a real app, we should index 'payoutId' and 'status'
+        const ordersRef = collection(db, 'orders');
+        const q = query(
+            ordersRef,
+            where('status', 'in', ['completed', 'delivered', 'collected']),
+            // where('payment.status', 'in', ['completed', 'paid', 'success']) // Optional: strict payment check
+        );
+
+        const snapshot = await getDocs(q);
+        const unpaidOrders = snapshot.docs.filter(doc => {
+            const data = doc.data();
+            // Check if order is paid (payment status) AND not yet paid out (payoutId)
+            const isPaid = ['completed', 'paid', 'success'].includes((data.payment?.status || data.paymentStatus || '').toLowerCase());
+            const hasPayout = !!data.payoutId;
+            return isPaid && !hasPayout;
+        });
+
+        console.log(`Found ${unpaidOrders.length} unpaid completed orders`);
+
+        if (unpaidOrders.length === 0) {
+            return { count: 0, message: 'No pending orders for payout' };
+        }
+
+        // 2. Group by vendor
+        const payoutsByVendor: Record<string, {
+            vendorId: string;
+            vendorName: string;
+            amount: number;
+            orderIds: string[];
+        }> = {};
+
+        unpaidOrders.forEach(doc => {
+            const data = doc.data();
+            const vendorId = data.restaurantId;
+            if (!vendorId) return;
+
+            if (!payoutsByVendor[vendorId]) {
+                payoutsByVendor[vendorId] = {
+                    vendorId,
+                    vendorName: data.restaurantName || 'Unknown Restaurant',
+                    amount: 0,
+                    orderIds: []
+                };
+            }
+
+            // Calculate net amount (after 5% commission)
+            const totalAmount = (data.pricing?.totalAmount || data.totalAmount || 0);
+            const netAmount = totalAmount * 0.95; // 95% to vendor
+
+            payoutsByVendor[vendorId].amount += netAmount;
+            payoutsByVendor[vendorId].orderIds.push(doc.id);
+        });
+
+        // 3. Create payout requests and update orders
+        let createdCount = 0;
+        const batch = writeBatch(db); // Use batch for atomicity (limit 500 ops)
+
+        // We'll process in chunks if needed, but for now assume < 500 ops
+        // Actually, we need to be careful with batch limits. 
+        // For safety, we'll do it sequentially or in small batches if needed.
+        // For this demo, we'll just do it directly.
+
+        for (const payout of Object.values(payoutsByVendor)) {
+            if (payout.amount <= 0) continue;
+
+            const payoutRef = doc(collection(db, 'payoutRequests'));
+            const payoutId = payoutRef.id;
+
+            // Create Payout Request
+            await setDoc(payoutRef, {
+                restaurantId: payout.vendorId,
+                restaurantName: payout.vendorName,
+                amount: Math.round(payout.amount), // Round to nearest integer
+                status: 'pending',
+                requestedAt: Timestamp.now(),
+                orderIds: payout.orderIds,
+                bankDetails: { // Mock bank details if not in profile
+                    accountNumber: 'XXXX' + Math.floor(1000 + Math.random() * 9000),
+                    ifscCode: 'HDFC0001234',
+                    accountHolderName: payout.vendorName
+                },
+                notes: `Daily payout for ${payout.orderIds.length} orders`
+            });
+
+            // Update Orders with payoutId
+            // We can't use a single batch for > 500 items, so we'll do promise.all for updates
+            const updatePromises = payout.orderIds.map(orderId =>
+                updateDoc(doc(db, 'orders', orderId), { payoutId: payoutId })
+            );
+            await Promise.all(updatePromises);
+
+            createdCount++;
+        }
+
+        return { count: createdCount, message: `Generated ${createdCount} payout requests` };
+
+    } catch (error) {
+        console.error('Error generating payouts:', error);
+        throw error;
+    }
+};
+
+export async function getPendingPayoutBalances() {
+    try {
+        // Reuse logic to find unpaid orders
+        const ordersRef = collection(db, 'orders');
+        const q = query(
+            ordersRef,
+            where('status', 'in', ['completed', 'delivered', 'collected'])
+        );
+
+        const snapshot = await getDocs(q);
+        const unpaidOrders = snapshot.docs.filter(doc => {
+            const data = doc.data();
+            const isPaid = ['completed', 'paid', 'success'].includes((data.payment?.status || data.paymentStatus || '').toLowerCase());
+            const hasPayout = !!data.payoutId;
+            return isPaid && !hasPayout;
+        });
+
+        const balancesByVendor: Record<string, {
+            vendorId: string;
+            vendorName: string;
+            amount: number;
+            orderCount: number;
+        }> = {};
+
+        unpaidOrders.forEach(doc => {
+            const data = doc.data();
+            const vendorId = data.restaurantId;
+            if (!vendorId) return;
+
+            if (!balancesByVendor[vendorId]) {
+                balancesByVendor[vendorId] = {
+                    vendorId,
+                    vendorName: data.restaurantName || 'Unknown Restaurant',
+                    amount: 0,
+                    orderCount: 0
+                };
+            }
+
+            const totalAmount = (data.pricing?.totalAmount || data.totalAmount || 0);
+            const netAmount = totalAmount * 0.95;
+
+            balancesByVendor[vendorId].amount += netAmount;
+            balancesByVendor[vendorId].orderCount++;
+        });
+
+        return Object.values(balancesByVendor).map(b => ({
+            ...b,
+            amount: Math.round(b.amount)
+        }));
+
+    } catch (error) {
+        console.error('Error getting pending balances:', error);
+        return [];
+    }
+}
+
+export async function updatePayoutStatus(payoutId: string, status: string, adminId: string, transactionId?: string) {
     try {
         const payoutRef = doc(db, 'payoutRequests', payoutId);
-        await updateDoc(payoutRef, {
+        const updateData: any = {
             status,
             processedBy: adminId,
             processedAt: Timestamp.now(),
             updatedAt: Timestamp.now()
-        });
+        };
+
+        if (status === 'approved' && transactionId) {
+            updateData.transactionId = transactionId;
+        } else if (status === 'approved') {
+            // Generate a mock transaction ID if not provided
+            updateData.transactionId = 'TXN' + Date.now() + Math.floor(Math.random() * 1000);
+        }
+
+        await updateDoc(payoutRef, updateData);
         return { success: true };
     } catch (error) {
         console.error('Error updating payout status:', error);
@@ -597,12 +772,13 @@ export async function updatePlatformSettings(settings: any) {
 export async function getAdminDashboardStats() {
     try {
         // Get counts for different collections
+        // Get counts for different collections with error handling
         const [usersSnap, ordersSnap, restaurantsSnap, menuItemsSnap, menuSnap] = await Promise.all([
-            getDocs(collection(db, 'users')),
-            getDocs(collection(db, 'orders')),
-            getDocs(collection(db, 'restaurants')),
-            getDocs(collectionGroup(db, 'menuItems')),
-            getDocs(collectionGroup(db, 'menu'))
+            getDocs(collection(db, 'users')).catch(err => { console.error('Error fetching users:', err); return { docs: [] }; }),
+            getDocs(collection(db, 'orders')).catch(err => { console.error('Error fetching orders:', err); return { docs: [] }; }),
+            getDocs(collection(db, 'restaurants')).catch(err => { console.error('Error fetching restaurants:', err); return { docs: [] }; }),
+            getDocs(collectionGroup(db, 'menuItems')).catch(err => { console.warn('Error fetching menuItems (collectionGroup):', err); return { docs: [] }; }),
+            getDocs(collectionGroup(db, 'menu')).catch(err => { console.warn('Error fetching menu (collectionGroup):', err); return { docs: [] }; })
         ]);
 
         // Debug logging

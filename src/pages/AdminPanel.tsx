@@ -286,7 +286,7 @@ export default function AdminPanel() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600">Platform Revenue</p>
-                  <p className="text-3xl font-bold text-gray-900">₹{dashboardStats.totalRevenue.toLocaleString()}</p>
+                  <p className="text-3xl font-bold text-gray-900">₹{Math.round(dashboardStats.totalRevenue).toLocaleString()}</p>
                   <div className="flex items-center gap-2 mt-2">
                     {dashboardStats.platformCommission > 0 && (
                       <Badge variant="default" className="text-xs">

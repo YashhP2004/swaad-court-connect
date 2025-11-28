@@ -256,7 +256,7 @@ export default function OrdersManagement() {
 
         <Card className="border-0 shadow-lg">
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-green-600">₹{stats.totalRevenue}</div>
+            <div className="text-2xl font-bold text-green-600">₹{Math.round(stats.totalRevenue).toLocaleString()}</div>
             <div className="text-sm text-gray-600">Revenue</div>
           </CardContent>
         </Card>
