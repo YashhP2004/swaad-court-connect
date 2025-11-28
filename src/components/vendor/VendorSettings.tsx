@@ -167,14 +167,14 @@ export default function VendorSettings() {
 
   const loadVendorSettings = async () => {
     if (!user?.uid) return;
-    
+
     setIsLoading(true);
     try {
       const [profileData, notificationData] = await Promise.all([
         getVendorProfile(user.uid),
         getVendorNotificationSettings(user.uid)
       ]);
-      
+
       if (profileData) {
         setRestaurantProfile({
           id: profileData.id,
@@ -218,7 +218,7 @@ export default function VendorSettings() {
           }
         });
       }
-      
+
       setNotificationSettings(notificationData);
     } catch (error) {
       console.error('Error loading vendor settings:', error);
@@ -230,10 +230,14 @@ export default function VendorSettings() {
 
   const handleSaveProfile = async () => {
     if (!user?.uid) return;
-    
+
     setIsSaving(true);
     try {
-      await updateVendorProfile(user.uid, restaurantProfile);
+      const profileToSave = {
+        ...restaurantProfile,
+        isOpen: restaurantProfile.isActive
+      };
+      await updateVendorProfile(user.uid, profileToSave);
       toast.success('Restaurant profile updated successfully');
       setIsEditing(false);
     } catch (error) {
@@ -246,7 +250,7 @@ export default function VendorSettings() {
 
   const handleSaveNotifications = async () => {
     if (!user?.uid) return;
-    
+
     setIsSaving(true);
     try {
       await updateVendorNotificationSettings(user.uid, notificationSettings);
@@ -306,7 +310,7 @@ export default function VendorSettings() {
           <h2 className="text-2xl font-bold text-gray-900">Restaurant Settings</h2>
           <p className="text-gray-600">Manage your restaurant profile and preferences</p>
         </div>
-        
+
         <div className="flex gap-3">
           {isEditing && (
             <>
@@ -365,7 +369,7 @@ export default function VendorSettings() {
                 </Button>
               )}
             </div>
-            
+
             <CardContent className="p-6">
               <div className="flex flex-col md:flex-row gap-6">
                 <div className="relative">
@@ -385,7 +389,7 @@ export default function VendorSettings() {
                     </Button>
                   )}
                 </div>
-                
+
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     {isEditing ? (
@@ -402,7 +406,7 @@ export default function VendorSettings() {
                       <span className="font-semibold">{restaurantProfile.rating}</span>
                     </div>
                   </div>
-                  
+
                   {isEditing ? (
                     <Textarea
                       value={restaurantProfile.description}
@@ -413,7 +417,7 @@ export default function VendorSettings() {
                   ) : (
                     <p className="text-gray-600 mb-4">{restaurantProfile.description}</p>
                   )}
-                  
+
                   <div className="flex flex-wrap gap-2">
                     {restaurantProfile.cuisine.map(cuisine => (
                       <Badge key={cuisine} variant="secondary" className="gap-1">
@@ -485,7 +489,7 @@ export default function VendorSettings() {
                   />
                 </div>
               </div>
-              
+
               <div>
                 <Label htmlFor="website">Website</Label>
                 <Input
@@ -495,7 +499,7 @@ export default function VendorSettings() {
                   disabled={!isEditing}
                 />
               </div>
-              
+
               <div>
                 <Label htmlFor="address">Address</Label>
                 <Textarea
@@ -608,7 +612,7 @@ export default function VendorSettings() {
                   />
                 </div>
               </div>
-              
+
               <div>
                 <Label htmlFor="deliveryTime">Estimated Delivery Time</Label>
                 <Input
@@ -636,13 +640,13 @@ export default function VendorSettings() {
                   <div className="w-24">
                     <span className="font-medium capitalize">{day}</span>
                   </div>
-                  
+
                   <Switch
                     checked={restaurantProfile.openingHours[day].isOpen}
                     onCheckedChange={(checked) => updateOpeningHours(day, 'isOpen', checked)}
                     disabled={!isEditing}
                   />
-                  
+
                   {restaurantProfile.openingHours[day].isOpen ? (
                     <div className="flex items-center gap-2">
                       <Input
@@ -682,8 +686,8 @@ export default function VendorSettings() {
                 <div>
                   <h4 className="font-semibold">Restaurant Active Status</h4>
                   <p className="text-sm text-gray-600">
-                    {restaurantProfile.isActive 
-                      ? 'Your restaurant is currently accepting orders' 
+                    {restaurantProfile.isActive
+                      ? 'Your restaurant is currently accepting orders'
                       : 'Your restaurant is temporarily closed'
                     }
                   </p>
@@ -718,7 +722,7 @@ export default function VendorSettings() {
                     onCheckedChange={(checked) => setNotificationSettings(prev => ({ ...prev, orderNotifications: checked }))}
                   />
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <div>
                     <h4 className="font-semibold">Payment Notifications</h4>
@@ -729,7 +733,7 @@ export default function VendorSettings() {
                     onCheckedChange={(checked) => setNotificationSettings(prev => ({ ...prev, paymentNotifications: checked }))}
                   />
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <div>
                     <h4 className="font-semibold">Review Notifications</h4>
@@ -740,7 +744,7 @@ export default function VendorSettings() {
                     onCheckedChange={(checked) => setNotificationSettings(prev => ({ ...prev, reviewNotifications: checked }))}
                   />
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <div>
                     <h4 className="font-semibold">SMS Notifications</h4>
@@ -751,7 +755,7 @@ export default function VendorSettings() {
                     onCheckedChange={(checked) => setNotificationSettings(prev => ({ ...prev, smsNotifications: checked }))}
                   />
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <div>
                     <h4 className="font-semibold">Push Notifications</h4>
@@ -762,7 +766,7 @@ export default function VendorSettings() {
                     onCheckedChange={(checked) => setNotificationSettings(prev => ({ ...prev, pushNotifications: checked }))}
                   />
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <div>
                     <h4 className="font-semibold">Promotional Emails</h4>
@@ -774,7 +778,7 @@ export default function VendorSettings() {
                   />
                 </div>
               </div>
-              
+
               <Button onClick={handleSaveNotifications} disabled={isSaving} className="w-full">
                 <Save className="w-4 h-4 mr-2" />
                 {isSaving ? 'Saving...' : 'Save Notification Settings'}
@@ -811,7 +815,7 @@ export default function VendorSettings() {
                   />
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="accountNumber">Account Number</Label>
@@ -830,7 +834,7 @@ export default function VendorSettings() {
                   />
                 </div>
               </div>
-              
+
               <p className="text-sm text-gray-600">
                 Contact support to update your bank account details for security reasons.
               </p>
@@ -849,17 +853,17 @@ export default function VendorSettings() {
               <Button variant="outline" className="w-full justify-start">
                 Change Password
               </Button>
-              
+
               <Button variant="outline" className="w-full justify-start">
                 Enable Two-Factor Authentication
               </Button>
-              
+
               <Button variant="outline" className="w-full justify-start">
                 Download Account Data
               </Button>
-              
+
               <Separator />
-              
+
               <div className="pt-4">
                 <h4 className="font-semibold text-red-600 mb-2">Danger Zone</h4>
                 <Button variant="destructive" className="w-full">

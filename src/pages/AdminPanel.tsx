@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Users, 
-  Store, 
-  ShoppingBag, 
-  CreditCard, 
-  BarChart3, 
-  Bell, 
+import {
+  Users,
+  Store,
+  ShoppingBag,
+  CreditCard,
+  BarChart3,
+  Bell,
   Settings,
   Shield,
   TrendingUp,
@@ -41,7 +41,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/auth-context';
 import { getAdminDashboardStats, getRecentActivity } from '@/lib/firebase';
 import VendorManagement from '@/components/admin/VendorManagement';
-import RestaurantMonitoring from '@/components/admin/RestaurantMonitoring';
+// import RestaurantMonitoring from '@/components/admin/RestaurantMonitoring';
 import OrdersManagement from '@/components/admin/OrdersManagement';
 import PaymentsTransactions from '@/components/admin/PaymentsTransactions';
 import UserManagement from '@/components/admin/UserManagement';
@@ -50,7 +50,7 @@ import NotificationsCommunication from '@/components/admin/NotificationsCommunic
 import AdminSettings from '@/components/admin/AdminSettings';
 import PasswordResetManager from '@/components/admin/PasswordResetManager';
 
-type AdminSection = 'dashboard' | 'vendors' | 'restaurants' | 'orders' | 'payments' | 'users' | 'analytics' | 'notifications' | 'settings' | 'password-reset';
+type AdminSection = 'dashboard' | 'vendors' | 'orders' | 'payments' | 'users' | 'analytics' | 'notifications' | 'settings' | 'password-reset';
 
 export default function AdminPanel() {
   const { user, isLoading: authLoading, logout } = useAuth();
@@ -67,6 +67,7 @@ export default function AdminPanel() {
     activeOrders: number;
     monthlyGrowth: number;
     platformCommission: number;
+    flaggedItems: number;
   };
 
   const defaultDashboardStats: DashboardStats = {
@@ -77,26 +78,27 @@ export default function AdminPanel() {
     totalRevenue: 0,
     activeOrders: 0,
     monthlyGrowth: 0,
-    platformCommission: 0
+    platformCommission: 0,
+    flaggedItems: 0
   };
 
   const [dashboardStats, setDashboardStats] = useState<DashboardStats>(defaultDashboardStats);
 
   useEffect(() => {
     console.log('AdminPanel useEffect - user:', user, 'authLoading:', authLoading);
-    
+
     // Check admin permissions - wait for auth to be initialized
     if (authLoading) {
       return; // Don't check permissions while auth is still loading
     }
-    
+
     if (!user) {
       // User is not authenticated, redirect to login
       console.log('AdminPanel: No user found, redirecting to login');
       navigate('/login');
       return;
     }
-    
+
     if (user.role !== 'admin') {
       toast.error('Access denied. Admin privileges required.');
       navigate('/'); // Redirect to home page for non-admin users
@@ -106,25 +108,35 @@ export default function AdminPanel() {
     loadDashboardStats();
   }, [user, authLoading, navigate]);
 
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+
   const loadDashboardStats = async () => {
     setDashboardLoading(true);
     try {
-      const stats = await getAdminDashboardStats();
+      const [stats, activity] = await Promise.all([
+        getAdminDashboardStats(),
+        getRecentActivity(5)
+      ]);
+
       const totalVendors = stats?.users?.vendors ?? 0;
       const activeRestaurants = stats?.restaurants?.active ?? 0;
       const totalRestaurants = stats?.restaurants?.total ?? 0;
       const pendingApprovals = Math.max(totalRestaurants - activeRestaurants, 0);
+      const flaggedItems = stats?.menuItems?.flagged ?? 0;
 
       setDashboardStats({
         totalVendors,
         pendingApprovals,
-        totalCustomers: stats?.users?.customers ?? stats?.users?.total ?? 0,
+        totalCustomers: stats?.users?.customers ?? 0,
         totalOrders: stats?.orders?.total ?? 0,
         totalRevenue: stats?.orders?.totalRevenue ?? 0,
         activeOrders: stats?.orders?.pending ?? 0,
-        monthlyGrowth: stats?.users?.monthlyGrowth ?? 0,
-        platformCommission: stats?.orders?.platformCommission ?? 0
+        monthlyGrowth: 0,
+        platformCommission: (stats?.orders?.totalRevenue ?? 0) * 0.1,
+        flaggedItems
       });
+
+      setRecentActivity(activity);
     } catch (error) {
       console.error('Error loading dashboard stats:', error);
       toast.error('Failed to load dashboard statistics');
@@ -139,7 +151,7 @@ export default function AdminPanel() {
       await logout();
       console.log('AdminPanel: Logout completed');
       toast.success('Logged out successfully');
-      
+
       // Force navigation after a short delay to ensure auth state is updated
       setTimeout(() => {
         console.log('AdminPanel: Forcing navigation to login');
@@ -154,7 +166,7 @@ export default function AdminPanel() {
   const navigationItems = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
     { id: 'vendors', label: 'Vendor Management', icon: Store },
-    { id: 'restaurants', label: 'Restaurant Monitoring', icon: Package },
+    // { id: 'restaurants', label: 'Restaurant Monitoring', icon: Package },
     { id: 'orders', label: 'Orders Management', icon: ShoppingBag },
     { id: 'payments', label: 'Payments & Transactions', icon: CreditCard },
     { id: 'users', label: 'User Management', icon: Users },
@@ -172,7 +184,7 @@ export default function AdminPanel() {
           <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
           <p className="text-gray-600">Platform overview and management</p>
         </div>
-        
+
         <div className="flex gap-3">
           <Button variant="outline" onClick={loadDashboardStats} className="gap-2">
             <Activity className="w-4 h-4" />
@@ -192,14 +204,14 @@ export default function AdminPanel() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <Card className="border-0 shadow-lg">
+          <Card className="border-0 shadow-lg h-full">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-white-600">Total Vendors</p>
-                  <p className="text-3xl font-bold text-white-900">{dashboardStats.totalVendors}</p>
+                  <p className="text-sm text-gray-600">Total Vendors</p>
+                  <p className="text-3xl font-bold text-gray-900">{dashboardStats.totalVendors}</p>
                   <div className="flex items-center gap-2 mt-2">
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant={dashboardStats.pendingApprovals > 0 ? "destructive" : "secondary"} className="text-xs">
                       {dashboardStats.pendingApprovals} pending
                     </Badge>
                   </div>
@@ -217,15 +229,15 @@ export default function AdminPanel() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <Card className="border-0 shadow-lg">
+          <Card className="border-0 shadow-lg h-full">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-white-600">Total Customers</p>
-                  <p className="text-3xl font-bold text-white-900">{dashboardStats.totalCustomers.toLocaleString()}</p>
+                  <p className="text-sm text-gray-600">Total Customers</p>
+                  <p className="text-3xl font-bold text-gray-900">{dashboardStats.totalCustomers.toLocaleString()}</p>
                   <div className="flex items-center gap-2 mt-2">
-                    <Badge variant="default" className="text-xs">
-                      +{dashboardStats.monthlyGrowth}% this month
+                    <Badge variant="secondary" className="text-xs">
+                      Active
                     </Badge>
                   </div>
                 </div>
@@ -242,16 +254,18 @@ export default function AdminPanel() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          <Card className="border-0 shadow-lg">
+          <Card className="border-0 shadow-lg h-full">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-white-600">Total Orders</p>
-                  <p className="text-3xl font-bold text-white-900">{dashboardStats.totalOrders.toLocaleString()}</p>
+                  <p className="text-sm text-gray-600">Total Orders</p>
+                  <p className="text-3xl font-bold text-gray-900">{dashboardStats.totalOrders.toLocaleString()}</p>
                   <div className="flex items-center gap-2 mt-2">
-                    <Badge variant="secondary" className="text-xs">
-                      {dashboardStats.activeOrders} active
-                    </Badge>
+                    {dashboardStats.activeOrders > 0 && (
+                      <Badge variant="secondary" className="text-xs">
+                        {dashboardStats.activeOrders} active
+                      </Badge>
+                    )}
                   </div>
                 </div>
                 <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
@@ -267,16 +281,18 @@ export default function AdminPanel() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
         >
-          <Card className="border-0 shadow-lg">
+          <Card className="border-0 shadow-lg h-full">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-white-600">Platform Revenue</p>
-                  <p className="text-3xl font-bold text-white-900">₹{dashboardStats.totalRevenue.toLocaleString()}</p>
+                  <p className="text-sm text-gray-600">Platform Revenue</p>
+                  <p className="text-3xl font-bold text-gray-900">₹{dashboardStats.totalRevenue.toLocaleString()}</p>
                   <div className="flex items-center gap-2 mt-2">
-                    <Badge variant="default" className="text-xs">
-                      ₹{dashboardStats.platformCommission.toLocaleString()} commission
-                    </Badge>
+                    {dashboardStats.platformCommission > 0 && (
+                      <Badge variant="default" className="text-xs">
+                        ₹{dashboardStats.platformCommission.toLocaleString()} commission
+                      </Badge>
+                    )}
                   </div>
                 </div>
                 <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
@@ -288,39 +304,47 @@ export default function AdminPanel() {
         </motion.div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="border-0 shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-orange-500" />
-              Pending Approvals
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
-                <div>
-                  <p className="font-medium text-black">Vendor Applications</p>
-                  <p className="text-sm text-gray-600">{dashboardStats.pendingApprovals} waiting for approval</p>
-                </div>
-                <Button size="sm" onClick={() => setActiveSection('vendors')}>
-                  Review
-                </Button>
+      {/* Quick Actions & Activity */}
+      <div className={`grid grid-cols-1 ${dashboardStats.pendingApprovals > 0 || (dashboardStats as any).flaggedItems > 0 ? 'lg:grid-cols-2' : ''} gap-6`}>
+        {(dashboardStats.pendingApprovals > 0 || (dashboardStats as any).flaggedItems > 0) && (
+          <Card className="border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-orange-500" />
+                Pending Approvals
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {dashboardStats.pendingApprovals > 0 && (
+                  <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
+                    <div>
+                      <p className="font-medium text-black">Vendor Applications</p>
+                      <p className="text-sm text-gray-600">{dashboardStats.pendingApprovals} waiting for approval</p>
+                    </div>
+                    <Button size="sm" onClick={() => setActiveSection('vendors')}>
+                      Review
+                    </Button>
+                  </div>
+                )}
+
+                {((dashboardStats as any).flaggedItems || 0) > 0 && (
+                  <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                    <div>
+                      <p className="font-medium text-black">Menu Item Reports</p>
+                      <p className="text-sm text-gray-600">
+                        {(dashboardStats as any).flaggedItems || 0} items flagged for review
+                      </p>
+                    </div>
+                    {/* <Button size="sm" variant="outline" onClick={() => setActiveSection('restaurants')}>
+                      Review
+                    </Button> */}
+                  </div>
+                )}
               </div>
-              
-              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                <div>
-                  <p className="font-medium text-black">Menu Item Reports</p>
-                  <p className="text-sm text-gray-600">3 items flagged for review</p>
-                </div>
-                <Button size="sm" variant="outline" onClick={() => setActiveSection('restaurants')}>
-                  Review
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="border-0 shadow-lg">
           <CardHeader>
@@ -330,30 +354,26 @@ export default function AdminPanel() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">New vendor registered</p>
-                  <p className="text-xs text-gray-500">Pizza Palace - 5 minutes ago</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Large order placed</p>
-                  <p className="text-xs text-gray-500">₹2,450 order from corporate client</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Payment dispute reported</p>
-                  <p className="text-xs text-gray-500">Order #12345 requires attention</p>
-                </div>
-              </div>
+            <div className="space-y-4">
+              {recentActivity.length > 0 ? (
+                recentActivity.map((activity) => (
+                  <div key={activity.id} className="flex items-center gap-3">
+                    <div className={`w-2 h-2 rounded-full ${activity.type === 'order' ? 'bg-blue-500' :
+                      activity.type === 'user' ? 'bg-green-500' : 'bg-orange-500'
+                      }`}></div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{activity.description}</p>
+                      <p className="text-xs text-gray-500">
+                        {new Date(activity.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {' - '}
+                        {new Date(activity.timestamp).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-gray-500 text-center py-4">No recent activity</p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -367,8 +387,8 @@ export default function AdminPanel() {
         return renderDashboard();
       case 'vendors':
         return <VendorManagement />;
-      case 'restaurants':
-        return <RestaurantMonitoring />;
+      // case 'restaurants':
+      //   return <RestaurantMonitoring />;
       case 'orders':
         return <OrdersManagement />;
       case 'payments':
@@ -426,16 +446,15 @@ export default function AdminPanel() {
               {navigationItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeSection === item.id;
-                
+
                 return (
                   <button
                     key={item.id}
                     onClick={() => setActiveSection(item.id as AdminSection)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors ${
-                      isActive
-                        ? 'bg-orange-100 text-orange-700 font-medium'
-                        : 'text-gray-600 hover:bg-gray-100'
-                    }`}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors ${isActive
+                      ? 'bg-orange-100 text-orange-700 font-medium'
+                      : 'text-gray-600 hover:bg-gray-100'
+                      }`}
                   >
                     <Icon className="w-5 h-5" />
                     <span className="text-sm">{item.label}</span>
@@ -473,7 +492,7 @@ export default function AdminPanel() {
             >
               {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </Button>
-            
+
             <div className="hidden lg:block">
               <h1 className="text-xl font-semibold capitalize">
                 {activeSection.replace(/([A-Z])/g, ' $1').trim()}
@@ -486,12 +505,12 @@ export default function AdminPanel() {
               <Bell className="w-5 h-5" />
               <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full text-xs"></span>
             </Button>
-            
+
             <Button variant="outline" size="sm" onClick={handleLogout} className="gap-2">
               <LogOut className="w-4 h-4" />
               <span className=" md:inline">Logout</span>
             </Button>
-            
+
             <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
               <span className="text-white text-sm font-medium">
                 {user?.name?.charAt(0) || 'A'}

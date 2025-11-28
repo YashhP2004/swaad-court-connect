@@ -112,9 +112,8 @@ export async function getMenuItems(restaurantId?: string, flagged?: boolean) {
 export async function getRestaurantMenuItems(restaurantId: string) {
     try {
         const menuQuery = query(
-            collection(db, 'menuItems'),
-            where('restaurantId', '==', restaurantId),
-            orderBy('createdAt', 'desc')
+            collection(db, 'vendors', restaurantId, 'menuItems')
+            // orderBy('createdAt', 'desc')
         );
         const snapshot = await getDocs(menuQuery);
         return snapshot.docs.map(doc => ({
@@ -220,11 +219,13 @@ export async function getAllRestaurantsForAdmin(status?: string) {
             restaurantsQuery = query(restaurantsQuery, where('status', '==', status));
         }
 
-        restaurantsQuery = query(restaurantsQuery, orderBy('createdAt', 'desc'));
+        // restaurantsQuery = query(restaurantsQuery, orderBy('createdAt', 'desc'));
+        console.log('Fetching restaurants for admin...');
         const snapshot = await getDocs(restaurantsQuery);
+        console.log(`Fetched ${snapshot.docs.length} restaurants`);
 
         return snapshot.docs.map(doc => {
-            const data = doc.data();
+            const data = doc.data() as any;
             return {
                 id: doc.id,
                 name: data.name || 'Unknown Restaurant',

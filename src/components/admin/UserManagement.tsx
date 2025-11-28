@@ -36,30 +36,13 @@ interface User {
   email: string;
   phone: string;
   avatar?: string;
+  profilePicture?: string;
   status: 'active' | 'suspended' | 'banned';
   joinedAt: Date;
-  lastActive: Date;
+  createdAt?: Date;
+  lastActive?: Date;
   totalOrders: number;
   totalSpent: number;
-  loyaltyPoints: number;
-  favoriteRestaurants: string[];
-  address?: {
-    street: string;
-    city: string;
-    state: string;
-    pincode: string;
-  };
-  preferences: {
-    cuisine: string[];
-    dietaryRestrictions: string[];
-  };
-  reportCount: number;
-  reports: Array<{
-    id: string;
-    reason: string;
-    reportedBy: string;
-    reportedAt: Date;
-  }>;
 }
 
 export default function UserManagement() {
@@ -86,9 +69,9 @@ export default function UserManagement() {
       console.log('Loading customer users from Firebase...');
       const customers = await getAllCustomersForAdmin();
       console.log('Loaded', customers.length, 'customers successfully');
-      
+
       setUsers(customers);
-      
+
       if (customers.length === 0) {
         toast.info('No customer users found in the database');
       } else {
@@ -153,15 +136,15 @@ export default function UserManagement() {
   const handleUserAction = async (userId: string, action: 'suspend' | 'activate' | 'ban') => {
     try {
       const newStatus = action === 'suspend' ? 'suspended' : action === 'ban' ? 'banned' : 'active';
-      
+
       // Update status in Firebase
       await updateCustomerStatus(userId, newStatus);
-      
+
       // Update local state
       setUsers(prev => prev.map(user =>
         user.id === userId ? { ...user, status: newStatus as any } : user
       ));
-      
+
       const actionText = action === 'suspend' ? 'suspended' : action === 'ban' ? 'banned' : 'activated';
       toast.success(`User ${actionText} successfully`);
     } catch (error) {
@@ -197,7 +180,7 @@ export default function UserManagement() {
           <h2 className="text-2xl font-bold text-gray-900">User Management</h2>
           <p className="text-gray-600">Monitor and manage customer accounts</p>
         </div>
-        
+
         <div className="flex gap-3">
           <Button variant="outline" onClick={loadUsers} className="gap-2">
             <RefreshCw className="w-4 h-4" />
@@ -330,10 +313,7 @@ export default function UserManagement() {
                         <div className="text-sm text-gray-600-bold">Spent</div>
                       </div>
 
-                      <div className="hidden md:block text-center">
-                        <div className="text-lg font-bold text-purple-600">{user.loyaltyPoints}</div>
-                        <div className="text-sm text-gray-600-bold">Points</div>
-                      </div>
+
                     </div>
 
                     <div className="flex items-center gap-4">
@@ -381,7 +361,7 @@ export default function UserManagement() {
                   </div>
 
                   {/* Mobile view additional info */}
-                  <div className="md:hidden mt-4 grid grid-cols-3 gap-4 text-center text-sm">
+                  <div className="md:hidden mt-4 grid grid-cols-2 gap-4 text-center text-sm">
                     <div>
                       <div className="font-bold text-blue-600">{user.totalOrders}</div>
                       <div className="text-gray-600">Orders</div>
@@ -390,10 +370,7 @@ export default function UserManagement() {
                       <div className="font-bold text-green-600">₹{user.totalSpent}</div>
                       <div className="text-gray-600">Spent</div>
                     </div>
-                    <div>
-                      <div className="font-bold text-purple-600">{user.loyaltyPoints}</div>
-                      <div className="text-gray-600">Points</div>
-                    </div>
+
                   </div>
                 </CardContent>
               </Card>
@@ -409,14 +386,14 @@ export default function UserManagement() {
                 {users.length === 0 ? 'No customer users found' : 'No users match your criteria'}
               </h3>
               <p className="text-gray-600">
-                {users.length === 0 
+                {users.length === 0
                   ? 'No customers have registered yet or none have the role "customer" in Firebase.'
                   : 'Try adjusting your search or filter criteria.'
                 }
               </p>
               {users.length === 0 && (
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={loadUsers}
                   className="mt-4"
                 >
@@ -436,7 +413,7 @@ export default function UserManagement() {
             <DialogHeader>
               <DialogTitle>User Details - {selectedUser.name}</DialogTitle>
             </DialogHeader>
-            
+
             <div className="space-y-6">
               {/* Basic Info */}
               <div className="flex items-center gap-4">
@@ -455,7 +432,7 @@ export default function UserManagement() {
               </div>
 
               {/* Stats */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="text-center p-3 bg-blue-50 rounded-lg">
                   <div className="text-2xl font-bold text-blue-600">{selectedUser.totalOrders}</div>
                   <div className="text-sm text-blue-800">Total Orders</div>
@@ -464,64 +441,25 @@ export default function UserManagement() {
                   <div className="text-2xl font-bold text-green-600">₹{selectedUser.totalSpent}</div>
                   <div className="text-sm text-green-800">Total Spent</div>
                 </div>
-                <div className="text-center p-3 bg-purple-50 rounded-lg">
-                  <div className="text-2xl font-bold text-purple-600">{selectedUser.loyaltyPoints}</div>
-                  <div className="text-sm text-purple-800">Loyalty Points</div>
-                </div>
+
               </div>
 
-              {/* Address */}
-              {selectedUser.address && (
-                <div>
-                  <h4 className="font-semibold mb-3">Address</h4>
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p>{selectedUser.address.street}</p>
-                    <p>{selectedUser.address.city}, {selectedUser.address.state} - {selectedUser.address.pincode}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Preferences */}
+              {/* Account Info */}
               <div>
-                <h4 className="font-semibold mb-3">Preferences</h4>
-                <div className="space-y-3">
-                  <div>
-                    <span className="text-sm text-gray-500">Favorite Cuisines</span>
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      {selectedUser.preferences.cuisine.map((cuisine, idx) => (
-                        <Badge key={idx} variant="outline">{cuisine}</Badge>
-                      ))}
-                    </div>
+                <h4 className="font-semibold mb-3">Account Information</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Member Since:</span>
+                    <span className="font-medium">{selectedUser.joinedAt.toLocaleDateString()}</span>
                   </div>
-                  {selectedUser.preferences.dietaryRestrictions.length > 0 && (
-                    <div>
-                      <span className="text-sm text-gray-500">Dietary Restrictions</span>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {selectedUser.preferences.dietaryRestrictions.map((restriction, idx) => (
-                          <Badge key={idx} variant="outline" className="bg-red-50 text-red-700">{restriction}</Badge>
-                        ))}
-                      </div>
+                  {selectedUser.lastActive && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Last Active:</span>
+                      <span className="font-medium">{selectedUser.lastActive.toLocaleDateString()}</span>
                     </div>
                   )}
                 </div>
               </div>
-
-              {/* Reports */}
-              {selectedUser.reports.length > 0 && (
-                <div>
-                  <h4 className="font-semibold mb-3 text-red-600">Reports ({selectedUser.reports.length})</h4>
-                  <div className="space-y-3">
-                    {selectedUser.reports.map((report) => (
-                      <div key={report.id} className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                        <p className="text-sm text-red-800 mb-1">{report.reason}</p>
-                        <p className="text-xs text-red-600">
-                          Reported by {report.reportedBy} on {report.reportedAt.toLocaleDateString()}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               {/* Actions */}
               <div className="flex gap-3">

@@ -38,7 +38,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import {
-  getAllRestaurantsForAdmin,
+  getAllVendors,
   approveVendorById,
   rejectVendorById,
   suspendVendorById,
@@ -55,20 +55,14 @@ interface Vendor {
   address?: string;
   cuisine: string[];
   logo?: string;
-  status: 'active' | 'inactive' | 'suspended';
+  status: 'active' | 'inactive' | 'suspended' | 'pending' | 'approved' | 'rejected';
   rating: number;
-  deliveryTime: string;
-  distance: string;
   isOpen: boolean;
   menuItemsCount: number;
   flaggedItemsCount: number;
-  averagePrice: number;
-  stats?: {
-    totalOrders: number;
-    totalRevenue: number;
-    averageRating: number;
-    completionRate: number;
-  };
+  createdAt?: Date;
+  updatedAt?: Date;
+  restaurantStatus?: string;
 }
 
 export default function VendorManagement() {
@@ -99,11 +93,11 @@ export default function VendorManagement() {
   const loadVendors = async () => {
     setIsLoading(true);
     try {
-      const restaurantsData = await getAllRestaurantsForAdmin();
-      setVendors(restaurantsData);
+      const vendorsData = await getAllVendors();
+      setVendors(vendorsData as Vendor[]);
     } catch (error) {
-      console.error('Error loading restaurants:', error);
-      toast.error('Failed to load restaurants');
+      console.error('Error loading vendors:', error);
+      toast.error('Failed to load vendors');
     } finally {
       setIsLoading(false);
     }
@@ -224,7 +218,7 @@ export default function VendorManagement() {
     try {
       // First verify the vendor exists
       const vendorInfo = await getVendorInfoForPasswordReset(passwordResetEmail);
-      
+
       if (!vendorInfo) {
         toast.error('No vendor found with this email address');
         return;
@@ -232,11 +226,11 @@ export default function VendorManagement() {
 
       // Send password reset email
       await sendVendorPasswordReset(passwordResetEmail);
-      
+
       toast.success(`Password reset email sent to ${passwordResetEmail}`);
       setShowPasswordResetDialog(false);
       setPasswordResetEmail('');
-      
+
     } catch (error) {
       console.error('Error sending password reset:', error);
       toast.error('Failed to send password reset email');
@@ -253,7 +247,7 @@ export default function VendorManagement() {
     };
 
     const config = variants[status as keyof typeof variants] || variants.active;
-    
+
     return (
       <Badge variant={config.variant} className={`text-xs ${config.color}`}>
         {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -302,7 +296,7 @@ export default function VendorManagement() {
           <h2 className="text-2xl font-bold text-gray-900">Restaurant Management</h2>
           <p className="text-gray-600">Manage restaurant listings and status</p>
         </div>
-        
+
         <div className="flex gap-3">
           <Button variant="outline" onClick={loadVendors} className="gap-2">
             <TrendingUp className="w-4 h-4" />
@@ -331,12 +325,7 @@ export default function VendorManagement() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg">
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-blue-600">{stats.open}</div>
-            <div className="text-sm text-gray-600-bold">Currently Open</div>
-          </CardContent>
-        </Card>
+
 
         <Card className="border-0 shadow-lg">
           <CardContent className="p-4 text-center">
@@ -366,7 +355,7 @@ export default function VendorManagement() {
             />
           </div>
         </div>
-        
+
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-48">
             <SelectValue placeholder="Filter by status" />
@@ -404,7 +393,7 @@ export default function VendorManagement() {
                               {vendor.name.charAt(0)}
                             </AvatarFallback>
                           </Avatar>
-                          
+
                           <div>
                             <h3 className="text-xl font-semibold text-White-900">{vendor.name}</h3>
                             <div className="flex items-center gap-2 mt-1">
@@ -418,6 +407,7 @@ export default function VendorManagement() {
                                 </Badge>
                               ))}
                             </div>
+
                           </div>
                         </div>
                       </div>
@@ -441,42 +431,31 @@ export default function VendorManagement() {
                             {vendor.address}
                           </div>
                         )}
-                        
+
                       </div>
 
                       {/* Restaurant Stats */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
                         <div className="text-center">
                           <div className="text-lg font-semibold text-gray-900">{vendor.menuItemsCount}</div>
                           <div className="text-xs text-gray-600">Menu Items</div>
                         </div>
-                        <div className="text-center">
-                          <div className="text-lg font-semibold text-gray-900">{vendor.flaggedItemsCount}</div>
-                          <div className="text-xs text-gray-600">Flagged Items</div>
-                        </div>
+                        {vendor.flaggedItemsCount > 0 && (
+                          <div className="text-center">
+                            <div className="text-lg font-semibold text-orange-600">{vendor.flaggedItemsCount}</div>
+                            <div className="text-xs text-gray-600">Flagged Items</div>
+                          </div>
+                        )}
                         <div className="text-center">
                           <div className="text-lg font-semibold text-gray-900 flex items-center justify-center gap-1">
-                            <Star className="w-4 h-4 text-yellow-500" />
-                            {vendor.rating}
+                            <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                            {vendor.rating.toFixed(1)}
                           </div>
                           <div className="text-xs text-gray-600">Rating</div>
                         </div>
-                        <div className="text-center">
-                          <div className="text-lg font-semibold text-gray-900">{vendor.deliveryTime}</div>
-                          <div className="text-xs text-gray-600">Delivery Time</div>
-                        </div>
                       </div>
 
-                      {/* Restaurant Status */}
-                      <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Store className="w-4 h-4 text-blue-500" />
-                          <span className="text-sm font-medium text-blue-700">Restaurant Status</span>
-                        </div>
-                        <p className="text-sm text-blue-600">
-                          {vendor.isOpen ? 'Currently Open' : 'Currently Closed'} 
-                        </p>
-                      </div>
+
                     </div>
 
                     {/* Actions */}
@@ -517,13 +496,13 @@ export default function VendorManagement() {
                                 <div>
                                   <h4 className="font-medium text-blue-900">Secure Password Reset</h4>
                                   <p className="text-sm text-blue-700 mt-1">
-                                    This will send a secure password reset link to the vendor's email. 
+                                    This will send a secure password reset link to the vendor's email.
                                     They can use this link to create a new password safely.
                                   </p>
                                 </div>
                               </div>
                             </div>
-                            
+
                             <div>
                               <Label htmlFor="resetEmail">Vendor Email Address</Label>
                               <Input
@@ -535,7 +514,7 @@ export default function VendorManagement() {
                                 className="mt-1"
                               />
                             </div>
-                            
+
                             <div className="flex gap-3">
                               <Button
                                 onClick={handlePasswordReset}
@@ -732,8 +711,8 @@ export default function VendorManagement() {
               <Store className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">No vendors found</h3>
               <p className="text-gray-600">
-                {statusFilter === 'all' 
-                  ? 'No vendors registered yet.' 
+                {statusFilter === 'all'
+                  ? 'No vendors registered yet.'
                   : `No ${statusFilter} vendors found.`}
               </p>
             </CardContent>

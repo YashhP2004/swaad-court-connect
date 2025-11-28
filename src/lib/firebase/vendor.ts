@@ -90,7 +90,7 @@ export async function getVendorProfile(vendorId: string): Promise<any> {
             cuisine: userData.cuisine || (restaurantData as any).cuisine || ['Indian'],
             logo: userData.logo || (restaurantData as any).image,
             rating: (restaurantData as any).rating || 4.2,
-            isOpen: userData.isOpen !== undefined ? userData.isOpen : ((restaurantData as any).isOpen !== undefined ? (restaurantData as any).isOpen : true),
+            isOpen: userData.isOpen !== undefined ? userData.isOpen : (userData.isActive !== undefined ? userData.isActive : ((restaurantData as any).isOpen !== undefined ? (restaurantData as any).isOpen : true)),
             restaurantId: restaurantId,
             status: userData.status || 'active',
             commissionRate: userData.commissionRate || 10,
@@ -129,10 +129,17 @@ export function getVendorOrdersRealtime(vendorId: string, callback: (orders: any
         q,
         (snapshot) => {
             console.log('📦 onSnapshot triggered, docs count:', snapshot.docs.length);
-            const orders = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            }));
+            const orders = snapshot.docs.map(doc => {
+                const data = doc.data() as any;
+                return {
+                    id: doc.id,
+                    ...data,
+                    items: (data.items || []).map((item: any) => ({
+                        ...item,
+                        price: Number(item.price || item.unitPrice || 0)
+                    }))
+                };
+            });
 
             // Sort in memory to avoid composite index requirement
             orders.sort((a, b) => {

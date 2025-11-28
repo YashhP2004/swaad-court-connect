@@ -27,8 +27,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/auth-context';
-import { 
-  getVendorOrdersRealtime, 
+import {
+  getVendorOrdersRealtime,
   updateOrderStatus,
   getVendorProfile,
   VendorOrderStatus
@@ -36,8 +36,10 @@ import {
 
 interface Order {
   id: string;
+  orderNumber: string;
   customerName: string;
   customerPhone: string;
+  customerEmail?: string;
   customerAvatar?: string;
   items: Array<{
     id: string;
@@ -90,17 +92,17 @@ export default function OrdersManagement() {
 
     setIsLoading(true);
     let unsubscribe: (() => void) | null = null;
-    
+
     // Load vendor profile and set up real-time listener
     const loadVendorProfile = async () => {
       try {
         const profile = await getVendorProfile(user.uid);
         setVendorProfile(profile);
-        
+
         // Use restaurantId if available, otherwise use uid
         const vendorIdToUse = profile?.restaurantId || user.uid;
         console.log('📡 OrdersManagement: Setting up listener for:', vendorIdToUse);
-        
+
         // Subscribe to real-time orders using restaurantId
         unsubscribe = getVendorOrdersRealtime(vendorIdToUse, (ordersData) => {
           console.log('📦 OrdersManagement: Received orders:', ordersData.length);
@@ -110,10 +112,11 @@ export default function OrdersManagement() {
             vendorStatus: (order.vendorStatus as VendorOrderStatus) || 'pending',
             customerName: order.userDetails?.name || 'Unknown Customer',
             customerPhone: order.userDetails?.phone || '',
+            customerEmail: order.userDetails?.email || '',
             createdAt: order.createdAt?.toDate ? order.createdAt.toDate() : new Date(order.createdAt),
             totalAmount: order.pricing?.totalAmount || 0
           }));
-          
+
           setOrders(formattedOrders);
           setIsLoading(false);
         });
@@ -250,7 +253,7 @@ export default function OrdersManagement() {
           <h2 className="text-2xl font-bold text-gray-900">Orders Management</h2>
           <p className="text-gray-600">Manage incoming orders and track their status</p>
         </div>
-        
+
         <div className="flex gap-3">
           <Button variant="outline" onClick={() => window.location.reload()} className="gap-2">
             <RefreshCw className="w-4 h-4" />
@@ -340,7 +343,7 @@ export default function OrdersManagement() {
             />
           </div>
         </div>
-        
+
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-48">
             <SelectValue placeholder="Filter by status" />
@@ -384,20 +387,20 @@ export default function OrdersManagement() {
                           </Avatar>
                           <div>
                             <h3 className="font-semibold text-lg">{order.customerName}</h3>
-                            <p className="text-sm text-gray-600">Order #{order.id.slice(-6)}</p>
+                            <p className="text-sm text-gray-600">Order #{order.orderNumber}</p>
                           </div>
                         </div>
-                        
+
                         <div className="flex items-center gap-2">
                           {getStatusIcon(order.vendorStatus)}
                           {getStatusBadge(order.vendorStatus)}
                         </div>
                       </div>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <Phone className="w-4 h-4" />
-                          {order.customerPhone || 'No phone'}
+                          {order.customerEmail || 'No email'}
                         </div>
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <Package className="w-4 h-4" />
@@ -405,21 +408,21 @@ export default function OrdersManagement() {
                         </div>
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <CreditCard className="w-4 h-4" />
-                          ₹{order.totalAmount} ({order.paymentStatus})
+                          ₹{Number(order.totalAmount) || 0} ({order.paymentStatus})
                         </div>
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <Clock className="w-4 h-4" />
                           {order.createdAt.toLocaleTimeString()}
                         </div>
                       </div>
-                      
+
                       <div className="mb-4">
                         <h4 className="font-medium mb-2">Items ({order.items?.length || 0})</h4>
                         <div className="space-y-1">
                           {order.items?.slice(0, 3).map((item, idx) => (
                             <div key={idx} className="flex justify-between text-sm">
                               <span>{item.quantity}x {item.name}</span>
-                              <span>₹{item.price * item.quantity}</span>
+                              <span>₹{(Number(item.price) || 0) * (Number(item.quantity) || 1)}</span>
                             </div>
                           ))}
                           {order.items?.length > 3 && (
@@ -429,7 +432,7 @@ export default function OrdersManagement() {
                           )}
                         </div>
                       </div>
-                      
+
                       {order.specialInstructions && (
                         <div className="mb-4">
                           <div className="flex items-center gap-2 mb-1">
@@ -442,7 +445,7 @@ export default function OrdersManagement() {
                         </div>
                       )}
                     </div>
-                    
+
                     {/* Actions */}
                     <div className="flex flex-col gap-3 lg:w-56">
                       <Button
@@ -453,13 +456,13 @@ export default function OrdersManagement() {
                         <Eye className="w-4 h-4" />
                         View Details
                       </Button>
-                      
+
                       {/* Quick Status Dropdown - ALWAYS VISIBLE */}
                       {!['completed', 'cancelled'].includes(order.vendorStatus) && (
                         <div className="space-y-2">
                           <label className="text-xs font-medium text-gray-700">Update Status:</label>
-                          <Select 
-                            value={order.vendorStatus} 
+                          <Select
+                            value={order.vendorStatus}
                             onValueChange={(newStatus) => handleStatusUpdate(order.id, newStatus as VendorOrderStatus)}
                           >
                             <SelectTrigger className="w-full">
@@ -477,7 +480,7 @@ export default function OrdersManagement() {
                           </Select>
                         </div>
                       )}
-                      
+
                       {/* Status Update Buttons */}
                       {order.vendorStatus === 'pending' && (
                         <>
@@ -498,7 +501,7 @@ export default function OrdersManagement() {
                           </Button>
                         </>
                       )}
-                      
+
                       {order.vendorStatus === 'accepted' && (
                         <Button
                           onClick={() => handleStatusUpdate(order.id, 'preparing')}
@@ -508,7 +511,7 @@ export default function OrdersManagement() {
                           Start Preparing
                         </Button>
                       )}
-                      
+
                       {order.vendorStatus === 'preparing' && (
                         <Button
                           onClick={() => handleStatusUpdate(order.id, 'ready')}
@@ -518,7 +521,7 @@ export default function OrdersManagement() {
                           Mark as Ready
                         </Button>
                       )}
-                      
+
                       {order.vendorStatus === 'ready' && (
                         <Button
                           onClick={() => handleStatusUpdate(order.id, 'collected')}
@@ -528,7 +531,7 @@ export default function OrdersManagement() {
                           Mark Collected
                         </Button>
                       )}
-                      
+
                       {order.vendorStatus === 'collected' && (
                         <Button
                           onClick={() => handleStatusUpdate(order.id, 'completed')}
@@ -538,7 +541,7 @@ export default function OrdersManagement() {
                           Mark Completed
                         </Button>
                       )}
-                      
+
                       {['accepted', 'preparing', 'ready', 'collected'].includes(order.vendorStatus) && (
                         <Button
                           variant="outline"
@@ -549,7 +552,7 @@ export default function OrdersManagement() {
                           Cancel
                         </Button>
                       )}
-                      
+
                       {['completed', 'cancelled'].includes(order.vendorStatus) && (
                         <div className="text-xs text-center text-gray-500 py-2 bg-gray-50 rounded">
                           Order {order.vendorStatus}
@@ -562,15 +565,15 @@ export default function OrdersManagement() {
             </motion.div>
           ))}
         </AnimatePresence>
-        
+
         {filteredOrders.length === 0 && (
           <Card className="border-0 shadow-lg">
             <CardContent className="p-12 text-center">
               <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">No orders found</h3>
               <p className="text-gray-600">
-                {statusFilter === 'all' 
-                  ? 'No orders available at the moment.' 
+                {statusFilter === 'all'
+                  ? 'No orders available at the moment.'
                   : `No ${statusFilter} orders found.`}
               </p>
             </CardContent>
@@ -585,7 +588,7 @@ export default function OrdersManagement() {
             <DialogHeader>
               <DialogTitle>Order Details - #{selectedOrder.id.slice(-6)}</DialogTitle>
             </DialogHeader>
-            
+
             <div className="space-y-6">
               {/* Customer Info */}
               <div>
@@ -601,9 +604,9 @@ export default function OrdersManagement() {
                   </div>
                 </div>
               </div>
-              
+
               <Separator />
-              
+
               {/* Order Items */}
               <div>
                 <h4 className="font-semibold mb-3">Order Items</h4>
@@ -627,9 +630,9 @@ export default function OrdersManagement() {
                   ))}
                 </div>
               </div>
-              
+
               <Separator />
-              
+
               {/* Pricing */}
               <div>
                 <h4 className="font-semibold mb-3">Order Summary</h4>
@@ -657,7 +660,7 @@ export default function OrdersManagement() {
                   </div>
                 </div>
               </div>
-              
+
               {selectedOrder.specialInstructions && (
                 <>
                   <Separator />
@@ -669,7 +672,7 @@ export default function OrdersManagement() {
                   </div>
                 </>
               )}
-              
+
               {/* Status Update Section in Modal */}
               <Separator />
               <div>
@@ -681,13 +684,13 @@ export default function OrdersManagement() {
                     {getStatusBadge(selectedOrder.vendorStatus)}
                   </div>
                 </div>
-                
+
                 {/* Quick Status Dropdown in Modal */}
                 {!['completed', 'cancelled'].includes(selectedOrder.vendorStatus) && (
                   <div className="mb-4">
                     <label className="text-sm font-medium text-gray-700 mb-2 block">Change Status To:</label>
-                    <Select 
-                      value={selectedOrder.vendorStatus} 
+                    <Select
+                      value={selectedOrder.vendorStatus}
                       onValueChange={(newStatus) => {
                         handleStatusUpdate(selectedOrder.id, newStatus as VendorOrderStatus);
                         setSelectedOrder(null);
@@ -708,7 +711,7 @@ export default function OrdersManagement() {
                     </Select>
                   </div>
                 )}
-                
+
                 <div className="grid grid-cols-2 gap-3">
                   {selectedOrder.vendorStatus === 'pending' && (
                     <>
@@ -735,7 +738,7 @@ export default function OrdersManagement() {
                       </Button>
                     </>
                   )}
-                  
+
                   {selectedOrder.vendorStatus === 'accepted' && (
                     <Button
                       onClick={() => {
@@ -748,7 +751,7 @@ export default function OrdersManagement() {
                       Start Preparing
                     </Button>
                   )}
-                  
+
                   {selectedOrder.vendorStatus === 'preparing' && (
                     <Button
                       onClick={() => {
@@ -761,7 +764,7 @@ export default function OrdersManagement() {
                       Mark as Ready
                     </Button>
                   )}
-                  
+
                   {selectedOrder.vendorStatus === 'ready' && (
                     <Button
                       onClick={() => {
@@ -774,7 +777,7 @@ export default function OrdersManagement() {
                       Mark as Collected
                     </Button>
                   )}
-                  
+
                   {selectedOrder.vendorStatus === 'collected' && (
                     <Button
                       onClick={() => {
@@ -787,7 +790,7 @@ export default function OrdersManagement() {
                       Mark as Completed
                     </Button>
                   )}
-                  
+
                   {['accepted', 'preparing', 'ready', 'collected'].includes(selectedOrder.vendorStatus) && (
                     <Button
                       variant="outline"
@@ -801,7 +804,7 @@ export default function OrdersManagement() {
                       Cancel Order
                     </Button>
                   )}
-                  
+
                   {['completed', 'cancelled'].includes(selectedOrder.vendorStatus) && (
                     <div className="col-span-2 text-center text-sm text-gray-500 py-2">
                       This order is {selectedOrder.vendorStatus} and cannot be updated.

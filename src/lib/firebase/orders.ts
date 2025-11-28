@@ -310,15 +310,19 @@ export async function updateOrderStatus(orderId: string, status: VendorOrderStat
                 statusHistory: arrayUnion(statusHistoryEntry)
             }).catch(() => { });
 
-            await addDoc(collection(db, 'notifications'), {
-                userId: orderData.userId,
-                type: 'order_status_update',
-                title: 'Order Status Updated',
-                message: `Your order #${orderId.slice(-6)} is now ${userStatus}`,
-                orderId: orderId,
-                isRead: false,
-                createdAt: timestamp
-            });
+            try {
+                await addDoc(collection(db, 'notifications'), {
+                    userId: orderData.userId,
+                    type: 'order_status_update',
+                    title: 'Order Status Updated',
+                    message: `Your order #${orderId.slice(-6)} is now ${userStatus}`,
+                    orderId: orderId,
+                    isRead: false,
+                    createdAt: timestamp
+                });
+            } catch (error) {
+                console.error('Error creating notification:', error);
+            }
         }
     } catch (error) {
         console.error('Error updating order status:', error);
@@ -417,9 +421,36 @@ export async function getAllOrdersForAdmin(status?: string, limitCount: number =
             ordersQuery = query(ordersQuery, where('status', '==', status));
         }
 
-        ordersQuery = query(ordersQuery, orderBy('createdAt', 'desc'), limit(limitCount));
+        // ordersQuery = query(ordersQuery, orderBy('createdAt', 'desc'), limit(limitCount));
+        console.log('Fetching orders for admin...');
         const snapshot = await getDocs(ordersQuery);
-        return snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) }));
+        console.log(`Fetched ${snapshot.docs.length} orders`);
+
+        return snapshot.docs.map(doc => {
+            const data = doc.data() as any;
+            return {
+                id: doc.id,
+                ...data,
+                customerName: data.customerName || data.userDetails?.name || 'Customer',
+                customerPhone: data.customerPhone || data.userDetails?.phone || 'No phone',
+                customerEmail: data.customerEmail || data.userDetails?.email || '',
+                items: (data.items || []).map((item: any) => {
+                    const quantity = Number(item.quantity) || 1;
+                    let price = Number(item.price || item.unitPrice || 0);
+                    if (isNaN(price)) price = 0;
+                    return {
+                        ...item,
+                        quantity,
+                        price
+                    };
+                }),
+                totalAmount: isNaN(Number(data.totalAmount || data.pricing?.totalAmount)) ? 0 : Number(data.totalAmount || data.pricing?.totalAmount),
+                paymentStatus: data.paymentStatus || data.payment?.status || 'pending',
+                paymentMethod: data.paymentMethod || data.payment?.method || 'Unknown',
+                createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
+                updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt || Date.now())
+            };
+        });
     } catch (error) {
         console.error('Error getting all orders for admin:', error);
         throw error;

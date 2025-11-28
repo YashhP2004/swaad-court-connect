@@ -68,7 +68,7 @@ export default function OrdersManagement() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [paymentFilter, setPaymentFilter] = useState<string>('all');
-  const [dateFilter, setDateFilter] = useState<string>('today');
+  const [dateFilter, setDateFilter] = useState<string>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
 
@@ -87,7 +87,7 @@ export default function OrdersManagement() {
       const ordersData = await getAllOrdersForAdmin();
       console.log('OrdersManagement: Loaded', ordersData.length, 'orders');
       setOrders(ordersData);
-      
+
       if (ordersData.length === 0) {
         toast.info('No orders found in the system');
       } else {
@@ -124,7 +124,7 @@ export default function OrdersManagement() {
     if (dateFilter === 'today') {
       filtered = filtered.filter(order => order.createdAt >= today);
     } else if (dateFilter === 'yesterday') {
-      filtered = filtered.filter(order => 
+      filtered = filtered.filter(order =>
         order.createdAt >= yesterday && order.createdAt < today
       );
     } else if (dateFilter === 'week') {
@@ -145,26 +145,33 @@ export default function OrdersManagement() {
   };
 
   const getStatusBadge = (status: string) => {
+    const normalizedStatus = status?.toLowerCase() || 'pending';
     const variants = {
       pending: <Badge variant="secondary">Pending</Badge>,
+      placed: <Badge variant="secondary">Placed</Badge>,
       accepted: <Badge className="bg-blue-100 text-blue-800">Accepted</Badge>,
+      confirmed: <Badge className="bg-blue-100 text-blue-800">Confirmed</Badge>,
       preparing: <Badge className="bg-yellow-100 text-yellow-800">Preparing</Badge>,
       ready: <Badge className="bg-green-100 text-green-800">Ready</Badge>,
       collected: <Badge variant="default">Collected</Badge>,
+      delivered: <Badge variant="default">Delivered</Badge>,
+      completed: <Badge variant="default">Completed</Badge>,
       cancelled: <Badge variant="destructive">Cancelled</Badge>,
       refunded: <Badge className="bg-purple-100 text-purple-800">Refunded</Badge>
     };
-    return variants[status as keyof typeof variants] || variants.pending;
+    return variants[normalizedStatus as keyof typeof variants] || <Badge variant="outline">{status}</Badge>;
   };
 
   const getPaymentBadge = (status: string) => {
+    const normalizedStatus = status?.toLowerCase() || 'pending';
     const variants = {
-      pending: <Badge variant="secondary">Pending</Badge>,
-      completed: <Badge className="bg-green-100 text-green-800">Completed</Badge>,
-      failed: <Badge variant="destructive">Failed</Badge>,
-      refunded: <Badge className="bg-purple-100 text-purple-800">Refunded</Badge>
+      pending: <Badge variant="secondary">Payment: Pending</Badge>,
+      completed: <Badge className="bg-green-100 text-green-800">Payment: Completed</Badge>,
+      paid: <Badge className="bg-green-100 text-green-800">Payment: Paid</Badge>,
+      failed: <Badge variant="destructive">Payment: Failed</Badge>,
+      refunded: <Badge className="bg-purple-100 text-purple-800">Payment: Refunded</Badge>
     };
-    return variants[status as keyof typeof variants] || variants.pending;
+    return variants[normalizedStatus as keyof typeof variants] || <Badge variant="outline">Payment: {status}</Badge>;
   };
 
   const getOrderTypeIcon = (type: string) => {
@@ -178,15 +185,31 @@ export default function OrdersManagement() {
 
   const calculateStats = () => {
     const totalOrders = filteredOrders.length;
-    const totalRevenue = filteredOrders.reduce((sum, order) => 
-      order.paymentStatus === 'completed' ? sum + order.totalAmount : sum, 0
-    );
-    const pendingOrders = filteredOrders.filter(order => 
-      ['pending', 'accepted', 'preparing'].includes(order.status)
-    ).length;
-    const completedOrders = filteredOrders.filter(order => 
-      order.status === 'collected'
-    ).length;
+
+    // Debug logs for status checking
+    // console.log('Unique statuses:', [...new Set(filteredOrders.map(o => o.status))]);
+    // console.log('Unique payment statuses:', [...new Set(filteredOrders.map(o => o.paymentStatus))]);
+
+    const totalRevenue = filteredOrders.reduce((sum, order) => {
+      const pStatus = order.paymentStatus?.toLowerCase();
+      const oStatus = order.status?.toLowerCase();
+      // Count revenue if payment is completed OR order is completed/delivered/collected
+      if (pStatus === 'completed' || pStatus === 'paid' ||
+        oStatus === 'collected' || oStatus === 'delivered' || oStatus === 'completed') {
+        return sum + (order.totalAmount || 0);
+      }
+      return sum;
+    }, 0);
+
+    const pendingOrders = filteredOrders.filter(order => {
+      const s = order.status?.toLowerCase();
+      return ['pending', 'placed', 'accepted', 'confirmed', 'preparing', 'ready'].includes(s);
+    }).length;
+
+    const completedOrders = filteredOrders.filter(order => {
+      const s = order.status?.toLowerCase();
+      return ['collected', 'delivered', 'completed'].includes(s);
+    }).length;
 
     return { totalOrders, totalRevenue, pendingOrders, completedOrders };
   };
@@ -209,7 +232,7 @@ export default function OrdersManagement() {
           <h2 className="text-2xl font-bold text-gray-900">Orders Management</h2>
           <p className="text-gray-600">Monitor and manage all platform orders</p>
         </div>
-        
+
         <div className="flex gap-3">
           <Button variant="outline" onClick={loadOrders} className="gap-2">
             <RefreshCw className="w-4 h-4" />
@@ -322,6 +345,7 @@ export default function OrdersManagement() {
               exit={{ opacity: 0, y: -20 }}
               transition={{ delay: index * 0.05 }}
             >
+
               <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
@@ -339,20 +363,20 @@ export default function OrdersManagement() {
                       <div className="hidden md:block">
                         <div className="text-sm text-gray-500">Customer</div>
                         <div className="font-medium">{order.customerName}</div>
-                        <div className="text-sm text-gray-600">{order.customerPhone}</div>
+                        <div className="text-sm text-gray-600">{order.customerEmail}</div>
                       </div>
 
                       <div className="hidden md:block">
                         <div className="text-sm text-gray-500">Restaurant</div>
                         <div className="font-medium">{order.restaurantName}</div>
-                        <div className="text-sm text-gray-600">{order.items.length} items</div>
+                        <div className="text-sm text-gray-600">{(order.items || []).length} items</div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-6">
                       <div className="text-right">
-                        <div className="text-2xl font-bold text-green-600">₹{order.totalAmount}</div>
-                        <div className="text-sm text-gray-600">{order.paymentMethod.toUpperCase()}</div>
+                        <div className="text-2xl font-bold text-green-600">₹{Number(order.totalAmount) || 0}</div>
+                        <div className="text-sm text-gray-600">{(order.paymentMethod || 'Unknown').toUpperCase()}</div>
                       </div>
 
                       <div className="flex flex-col gap-2">
@@ -409,7 +433,7 @@ export default function OrdersManagement() {
             <DialogHeader>
               <DialogTitle>Order Details - {selectedOrder.orderNumber}</DialogTitle>
             </DialogHeader>
-            
+
             <div className="space-y-6">
               {/* Order Info */}
               <div className="grid grid-cols-2 gap-4">
@@ -440,13 +464,10 @@ export default function OrdersManagement() {
                     <p className="font-medium">{selectedOrder.customerName}</p>
                   </div>
                   <div>
-                    <span className="text-sm text-gray-500">Phone</span>
-                    <p className="font-medium">{selectedOrder.customerPhone}</p>
-                  </div>
-                  <div className="col-span-2">
                     <span className="text-sm text-gray-500">Email</span>
                     <p className="font-medium">{selectedOrder.customerEmail}</p>
                   </div>
+
                 </div>
               </div>
 
@@ -460,7 +481,7 @@ export default function OrdersManagement() {
               <div>
                 <h4 className="font-semibold mb-3">Order Items</h4>
                 <div className="space-y-3">
-                  {selectedOrder.items.map((item) => (
+                  {(selectedOrder.items || []).map((item) => (
                     <div key={item.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center gap-3">
                         <div className={`w-3 h-3 rounded-full ${item.isVeg ? 'bg-green-500' : 'bg-red-500'}`}></div>
@@ -469,11 +490,11 @@ export default function OrdersManagement() {
                           <p className="text-sm text-gray-600">Qty: {item.quantity}</p>
                         </div>
                       </div>
-                      <p className="font-semibold">₹{item.price * item.quantity}</p>
+                      <p className="font-semibold">₹{(Number(item.price) || 0) * (Number(item.quantity) || 1)}</p>
                     </div>
                   ))}
                 </div>
-                
+
                 <div className="mt-4 pt-4 border-t">
                   <div className="flex justify-between items-center text-lg font-bold">
                     <span>Total Amount</span>
