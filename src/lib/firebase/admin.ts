@@ -425,7 +425,13 @@ export async function getAllCustomersForAdmin(status?: string) {
         const snapshot = await getDocs(customersQuery);
         return snapshot.docs.map(doc => {
             const data = doc.data() as any;
-            return { id: doc.id, ...data };
+            return {
+                id: doc.id,
+                ...data,
+                joinedAt: data.joinedAt?.toDate ? data.joinedAt.toDate() : (data.joinedAt ? new Date(data.joinedAt) : new Date()),
+                createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : undefined),
+                lastActive: data.lastActive?.toDate ? data.lastActive.toDate() : (data.lastActive ? new Date(data.lastActive) : undefined)
+            };
         });
     } catch (error) {
         console.error('Error getting all customers for admin:', error);
@@ -480,7 +486,7 @@ export async function getAllTransactionsForAdmin(dateRange?: string) {
                 platformFee: 0, // Add platform fee if available
                 payoutStatus: data.payoutStatus || 'pending',
                 payoutBatchId: data.payoutBatchId || null,
-                vendorEarnings: data.vendorEarnings || 0
+                vendorEarnings: data.vendorEarnings || (((data as any).pricing?.totalAmount || (data as any).totalAmount || 0) * 0.95) // Calculate if missing
             };
         });
     } catch (error) {
@@ -491,23 +497,58 @@ export async function getAllTransactionsForAdmin(dateRange?: string) {
 
 export async function getAllPayoutRequestsForAdmin(status?: string) {
     try {
-        let payoutQuery: any = collection(db, 'payoutRequests');
+        const payoutRequestsRef = collection(db, 'payoutRequests');
 
-        if (status && status !== 'all') {
-            payoutQuery = query(payoutQuery, where('status', '==', status));
+        // Try with orderBy first, but fall back to unordered if index doesn't exist
+        try {
+            let payoutQuery: any = payoutRequestsRef;
+
+            if (status && status !== 'all') {
+                payoutQuery = query(payoutQuery, where('status', '==', status));
+            }
+
+            // Use requestedAt instead of createdAt
+            payoutQuery = query(payoutQuery, orderBy('requestedAt', 'desc'));
+            const snapshot = await getDocs(payoutQuery);
+
+            console.log(`getAllPayoutRequestsForAdmin: Found ${snapshot.docs.length} payout requests`);
+
+            return snapshot.docs.map(doc => {
+                const data = doc.data() as any;
+                return {
+                    id: doc.id,
+                    ...data,
+                    requestedAt: data.requestedAt?.toDate ? data.requestedAt.toDate() : new Date(data.requestedAt || Date.now()),
+                    processedAt: data.processedAt?.toDate ? data.processedAt.toDate() : (data.processedAt ? new Date(data.processedAt) : undefined)
+                };
+            });
+        } catch (indexError: any) {
+            // If index doesn't exist, fetch without orderBy
+            console.warn('Index not found, fetching without orderBy:', indexError);
+
+            let payoutQuery: any = payoutRequestsRef;
+
+            if (status && status !== 'all') {
+                payoutQuery = query(payoutQuery, where('status', '==', status));
+            }
+
+            const snapshot = await getDocs(payoutQuery);
+
+            console.log(`getAllPayoutRequestsForAdmin (no index): Found ${snapshot.docs.length} payout requests`);
+
+            const results = snapshot.docs.map(doc => {
+                const data = doc.data() as any;
+                return {
+                    id: doc.id,
+                    ...data,
+                    requestedAt: data.requestedAt?.toDate ? data.requestedAt.toDate() : new Date(data.requestedAt || Date.now()),
+                    processedAt: data.processedAt?.toDate ? data.processedAt.toDate() : (data.processedAt ? new Date(data.processedAt) : undefined)
+                };
+            });
+
+            // Sort in memory
+            return results.sort((a, b) => b.requestedAt.getTime() - a.requestedAt.getTime());
         }
-
-        payoutQuery = query(payoutQuery, orderBy('createdAt', 'desc'));
-        const snapshot = await getDocs(payoutQuery);
-        return snapshot.docs.map(doc => {
-            const data = doc.data() as any;
-            return {
-                id: doc.id,
-                ...data,
-                requestedAt: data.requestedAt?.toDate ? data.requestedAt.toDate() : new Date(data.requestedAt || Date.now()),
-                processedAt: data.processedAt?.toDate ? data.processedAt.toDate() : (data.processedAt ? new Date(data.processedAt) : undefined)
-            };
-        });
     } catch (error) {
         console.error('Error getting payout requests for admin:', error);
         throw error;

@@ -14,7 +14,8 @@ import {
   Wallet,
   Calendar,
   BarChart3,
-  FileText
+  FileText,
+  RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,7 +29,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/auth-context';
-import { getVendorPayoutHistory, requestVendorPayout, type PayoutBatch } from '@/lib/firebase/payout';
+import { getVendorPayoutHistory, getVendorPayoutRequests, type PayoutBatch } from '@/lib/firebase/payout';
+import { getVendorProfile } from '@/lib/firebase';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 
@@ -69,10 +71,22 @@ interface CompletedPayout {
   orderIds: string[];
 }
 
+interface PayoutRequest {
+  id: string;
+  amount: number;
+  status: 'pending' | 'approved' | 'rejected' | 'paid';
+  requestedAt: Date;
+  processedAt?: Date;
+  notes?: string;
+  rejectionReason?: string;
+}
+
 export default function BillingTransactions() {
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [completedPayouts, setCompletedPayouts] = useState<CompletedPayout[]>([]);
+  const [payoutRequests, setPayoutRequests] = useState<PayoutRequest[]>([]);
+  const [bankDetails, setBankDetails] = useState<any>(null);
   const [paymentSummary, setPaymentSummary] = useState<PaymentSummary>({
     totalEarnings: 0,
     lifetimeEarnings: 0,
@@ -86,8 +100,7 @@ export default function BillingTransactions() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [payoutStatusFilter, setPayoutStatusFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [isPayoutDialogOpen, setIsPayoutDialogOpen] = useState(false);
-  const [payoutAmount, setPayoutAmount] = useState(0);
+
   const [isLoading, setIsLoading] = useState(true);
   const [weeklyEarnings, setWeeklyEarnings] = useState<number[]>([]);
 
@@ -102,16 +115,42 @@ export default function BillingTransactions() {
 
     setIsLoading(true);
     try {
+      console.log('BillingTransactions: Loading data for vendor:', user.uid);
+
+      // Get vendor profile to find correct restaurantId
+      let restaurantId = user.uid;
+      try {
+        const profile = await getVendorProfile(user.uid);
+        if (profile?.restaurantId) {
+          restaurantId = profile.restaurantId;
+          setBankDetails(profile.bankDetails);
+          console.log('BillingTransactions: Using restaurantId from profile:', restaurantId);
+        } else {
+          console.log('BillingTransactions: No restaurantId in profile, using uid:', user.uid);
+        }
+      } catch (e) {
+        console.warn('BillingTransactions: Failed to fetch vendor profile, using uid as restaurantId');
+      }
+
+      // Fetch payout requests
+      try {
+        const requests = await getVendorPayoutRequests(restaurantId);
+        setPayoutRequests(requests as PayoutRequest[]);
+      } catch (error) {
+        console.error('Error fetching payout requests:', error);
+      }
+
       // Get all orders for this vendor
       const ordersRef = collection(db, 'orders');
+      // Use simple query without orderBy to avoid index issues
       const ordersQuery = query(
         ordersRef,
-        where('restaurantId', '==', user.uid),
-        where('payment.status', '==', 'Completed'),
-        orderBy('createdAt', 'desc')
+        where('restaurantId', '==', restaurantId)
       );
 
       const ordersSnapshot = await getDocs(ordersQuery);
+      console.log(`BillingTransactions: Found ${ordersSnapshot.docs.length} orders`);
+
       const transactionData: Transaction[] = [];
       let lifetimeEarnings = 0;
       let pendingBalance = 0;
@@ -124,36 +163,45 @@ export default function BillingTransactions() {
         const earnings = totalAmount - commission;
         const payoutStatus = order.payoutStatus || 'pending';
 
-        lifetimeEarnings += earnings;
+        // Only count completed/paid orders
+        const paymentStatus = (order.payment?.status || order.paymentStatus || '').toLowerCase();
+        const isCompleted = ['completed', 'paid', 'success'].includes(paymentStatus);
 
-        if (payoutStatus === 'pending') {
-          pendingBalance += earnings;
-        } else if (payoutStatus === 'paid') {
-          completedPayoutsTotal += earnings;
+        if (isCompleted) {
+          lifetimeEarnings += earnings;
+
+          if (payoutStatus === 'pending') {
+            pendingBalance += earnings;
+          } else if (payoutStatus === 'paid') {
+            completedPayoutsTotal += earnings;
+          }
+
+          transactionData.push({
+            id: doc.id,
+            orderId: doc.id,
+            customerName: order.customerName || 'Unknown Customer',
+            amount: totalAmount,
+            paymentMethod: order.payment?.method || 'card',
+            status: 'completed',
+            orderStatus: order.status || 'pending',
+            payoutStatus: payoutStatus,
+            transactionId: order.payment?.transactionId || '',
+            timestamp: order.createdAt?.toDate ? order.createdAt.toDate() : new Date(),
+            commission,
+            earnings,
+            description: `Order payment for ${order.items?.length || 0} items`,
+            payoutBatchId: order.payoutBatchId
+          });
         }
-
-        transactionData.push({
-          id: doc.id,
-          orderId: doc.id,
-          customerName: order.customerName || 'Unknown Customer',
-          amount: totalAmount,
-          paymentMethod: order.payment?.method || 'card',
-          status: order.payment?.status === 'Completed' ? 'completed' : 'pending',
-          orderStatus: order.status || 'pending',
-          payoutStatus: payoutStatus,
-          transactionId: order.payment?.transactionId || '',
-          timestamp: order.createdAt?.toDate ? order.createdAt.toDate() : new Date(),
-          commission,
-          earnings,
-          description: `Order payment for ${order.items?.length || 0} items`,
-          payoutBatchId: order.payoutBatchId
-        });
       });
+
+      // Sort transactions by date (newest first)
+      transactionData.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
       setTransactions(transactionData);
 
       // Get payout history
-      const payoutHistory = await getVendorPayoutHistory(user.uid);
+      const payoutHistory = await getVendorPayoutHistory(restaurantId);
       const completedPayoutsData: CompletedPayout[] = payoutHistory
         .filter(batch => batch.status === 'completed')
         .map(batch => {
@@ -185,7 +233,7 @@ export default function BillingTransactions() {
         lifetimeEarnings,
         filteredEarnings,
         pendingPayouts: pendingBalance,
-        completedPayouts: completedPayoutsData.length,
+        completedPayouts: completedPayoutsData.reduce((sum, p) => sum + p.amount, 0),
         lastPayoutDate: lastPayout?.payoutDate,
         lastPayoutAmount: lastPayout?.amount
       });
@@ -302,28 +350,44 @@ export default function BillingTransactions() {
     }
   };
 
-  const handleRequestPayout = async () => {
-    if (payoutAmount <= 0 || payoutAmount > paymentSummary.pendingPayouts) {
-      toast.error('Invalid payout amount');
-      return;
-    }
 
-    try {
-      if (!user?.uid) return;
-      await requestVendorPayout(user.uid, payoutAmount);
-
-      toast.success('Payout request submitted successfully');
-      setPayoutAmount(0);
-      setIsPayoutDialogOpen(false);
-      loadBillingData();
-    } catch (error) {
-      console.error('Error requesting payout:', error);
-      toast.error('Failed to submit payout request');
-    }
-  };
 
   const exportTransactions = () => {
     toast.success('Transaction report exported successfully');
+  };
+
+  const handleExportReport = () => {
+    try {
+      const headers = ['Metric', 'Value'];
+      const rows = [
+        ['Total Earnings', paymentSummary.lifetimeEarnings.toFixed(2)],
+        ['Pending Payouts', paymentSummary.pendingPayouts.toFixed(2)],
+        ['Completed Payouts', paymentSummary.completedPayouts.toFixed(2)],
+        ['Filtered Earnings', paymentSummary.filteredEarnings.toFixed(2)],
+        ['Last Payout Date', paymentSummary.lastPayoutDate ? paymentSummary.lastPayoutDate.toLocaleDateString() : 'N/A'],
+        ['Last Payout Amount', paymentSummary.lastPayoutAmount ? paymentSummary.lastPayoutAmount.toFixed(2) : '0.00']
+      ];
+
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.join(','))
+      ].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `financial_report_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success('Financial report exported successfully');
+    } catch (error) {
+      console.error('Error exporting report:', error);
+      toast.error('Failed to export report');
+    }
   };
 
   if (isLoading) {
@@ -347,22 +411,16 @@ export default function BillingTransactions() {
         </div>
 
         <div className="flex gap-3">
+          <Button variant="outline" onClick={loadBillingData} className="gap-2">
+            <RefreshCw className="w-4 h-4" />
+            Refresh
+          </Button>
           <Button variant="outline" onClick={exportTransactions} className="gap-2">
             <Download className="w-4 h-4" />
             Export Report
           </Button>
 
-          <Dialog open={isPayoutDialogOpen} onOpenChange={setIsPayoutDialogOpen}>
-            <DialogTrigger asChild>
-              <Button
-                className="gap-2 bg-orange-600 hover:bg-orange-700"
-                disabled={paymentSummary.pendingPayouts === 0}
-              >
-                <Banknote className="w-4 h-4" />
-                Request Payout
-              </Button>
-            </DialogTrigger>
-          </Dialog>
+
         </div>
       </div>
 
@@ -378,9 +436,9 @@ export default function BillingTransactions() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Total Earnings</p>
-                  <p className="text-2xl font-bold text-green-600">₹{paymentSummary.lifetimeEarnings.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-green-600">₹{paymentSummary.lifetimeEarnings.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                   <div className="flex items-center gap-1 mt-2">
-                    <span className="text-xs text-gray-500">Filtered: ₹{paymentSummary.filteredEarnings.toLocaleString()}</span>
+                    <span className="text-xs text-gray-500">Filtered: ₹{paymentSummary.filteredEarnings.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                 </div>
                 <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
@@ -401,7 +459,7 @@ export default function BillingTransactions() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Pending Payouts</p>
-                  <p className="text-2xl font-bold text-orange-600">₹{paymentSummary.pendingPayouts.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-orange-600">₹{paymentSummary.pendingPayouts.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                   <div className="flex items-center gap-1 mt-2">
                     <Clock className="w-4 h-4 text-orange-500" />
                     <span className="text-sm text-orange-600">Outstanding</span>
@@ -425,7 +483,7 @@ export default function BillingTransactions() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Completed Payouts</p>
-                  <p className="text-2xl font-bold text-purple-600">{paymentSummary.completedPayouts}</p>
+                  <p className="text-2xl font-bold text-purple-600">₹{paymentSummary.completedPayouts.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                   <div className="flex items-center gap-1 mt-2">
                     <CreditCard className="w-4 h-4 text-purple-500" />
                     <span className="text-sm text-purple-600">Total received</span>
@@ -457,7 +515,7 @@ export default function BillingTransactions() {
                   <div className="flex items-center gap-1 mt-2">
                     <span className="text-sm text-blue-600">
                       {paymentSummary.lastPayoutAmount
-                        ? `₹${paymentSummary.lastPayoutAmount.toLocaleString()}`
+                        ? `₹${paymentSummary.lastPayoutAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                         : '-'}
                     </span>
                   </div>
@@ -504,7 +562,7 @@ export default function BillingTransactions() {
       <Tabs defaultValue="transactions" className="space-y-6">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="transactions">Transaction History</TabsTrigger>
-          <TabsTrigger value="payouts">Completed Payouts</TabsTrigger>
+          <TabsTrigger value="payouts">Payouts & Requests</TabsTrigger>
           <TabsTrigger value="reports">Financial Reports</TabsTrigger>
         </TabsList>
 
@@ -595,12 +653,12 @@ export default function BillingTransactions() {
                       <TableCell>{transaction.customerName}</TableCell>
                       <TableCell>
                         <div>
-                          <p className="font-semibold">₹{transaction.amount.toLocaleString()}</p>
+                          <p className="font-semibold">₹{transaction.amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                           <p className="text-sm text-gray-500">-₹{transaction.commission.toFixed(2)} fee</p>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <p className="font-semibold text-green-600">₹{transaction.earnings.toLocaleString()}</p>
+                        <p className="font-semibold text-green-600">₹{transaction.earnings.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -637,11 +695,14 @@ export default function BillingTransactions() {
         </TabsContent>
 
         <TabsContent value="payouts" className="space-y-6">
+          {/* Payout Requests Section */}
+
+
           <Card className="border-0 shadow-lg">
             <CardHeader>
-              <CardTitle>Completed Payouts</CardTitle>
+              <CardTitle>Completed Payout Batches</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-6">
               <div className="space-y-4">
                 {completedPayouts.map((payout, index) => (
                   <motion.div
@@ -665,7 +726,7 @@ export default function BillingTransactions() {
                     </div>
 
                     <div className="text-right">
-                      <div className="text-2xl font-bold text-green-600">₹{payout.amount.toLocaleString()}</div>
+                      <div className="text-2xl font-bold text-green-600">₹{payout.amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                       <Button variant="ghost" size="sm" className="mt-2">
                         <FileText className="w-4 h-4 mr-2" />
                         View Statement
@@ -687,6 +748,12 @@ export default function BillingTransactions() {
         </TabsContent>
 
         <TabsContent value="reports" className="space-y-6">
+          <div className="flex justify-end mb-4">
+            <Button variant="outline" onClick={handleExportReport} className="gap-2">
+              <Download className="w-4 h-4" />
+              Export Report
+            </Button>
+          </div>
           <div className="grid lg:grid-cols-2 gap-6">
             <Card className="border-0 shadow-lg">
               <CardHeader>
@@ -734,181 +801,141 @@ export default function BillingTransactions() {
             </Card>
           </div>
         </TabsContent>
-      </Tabs>
+      </Tabs >
 
       {/* Transaction Details Dialog */}
-      {selectedTransaction && (
-        <Dialog open={!!selectedTransaction} onOpenChange={() => setSelectedTransaction(null)}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Transaction Details</DialogTitle>
-            </DialogHeader>
+      {
+        selectedTransaction && (
+          <Dialog open={!!selectedTransaction} onOpenChange={() => setSelectedTransaction(null)}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Transaction Details</DialogTitle>
+              </DialogHeader>
 
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Transaction ID</Label>
-                  <p className="font-semibold">{selectedTransaction.transactionId}</p>
-                </div>
-                <div>
-                  <Label>Order ID</Label>
-                  <p className="font-semibold">{selectedTransaction.orderId}</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Customer</Label>
-                  <p className="font-semibold">{selectedTransaction.customerName}</p>
-                </div>
-                <div>
-                  <Label>Payment Method</Label>
-                  <div className="flex items-center gap-2">
-                    {getPaymentMethodIcon(selectedTransaction.paymentMethod)}
-                    <span className="capitalize font-semibold">{selectedTransaction.paymentMethod}</span>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Transaction ID</Label>
+                    <p className="font-semibold">{selectedTransaction.transactionId}</p>
+                  </div>
+                  <div>
+                    <Label>Order ID</Label>
+                    <p className="font-semibold">{selectedTransaction.orderId}</p>
                   </div>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Label>Amount</Label>
-                  <p className="font-semibold text-lg">₹{selectedTransaction.amount.toLocaleString()}</p>
-                </div>
-                <div>
-                  <Label>Commission</Label>
-                  <p className="font-semibold text-red-600">₹{selectedTransaction.commission.toFixed(2)}</p>
-                </div>
-                <div>
-                  <Label>Your Earnings</Label>
-                  <p className="font-semibold text-green-600">₹{selectedTransaction.earnings.toLocaleString()}</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Order Status</Label>
-                  <div className="flex items-center gap-2 mt-1">
-                    {getStatusIcon(selectedTransaction.orderStatus)}
-                    {getStatusBadge(selectedTransaction.orderStatus)}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Customer</Label>
+                    <p className="font-semibold">{selectedTransaction.customerName}</p>
+                  </div>
+                  <div>
+                    <Label>Payment Method</Label>
+                    <div className="flex items-center gap-2">
+                      {getPaymentMethodIcon(selectedTransaction.paymentMethod)}
+                      <span className="capitalize font-semibold">{selectedTransaction.paymentMethod}</span>
+                    </div>
                   </div>
                 </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Label>Amount</Label>
+                    <p className="font-semibold text-lg">₹{selectedTransaction.amount.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <Label>Commission</Label>
+                    <p className="font-semibold text-red-600">₹{selectedTransaction.commission.toFixed(2)}</p>
+                  </div>
+                  <div>
+                    <Label>Your Earnings</Label>
+                    <p className="font-semibold text-green-600">₹{selectedTransaction.earnings.toLocaleString()}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Order Status</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      {getStatusIcon(selectedTransaction.orderStatus)}
+                      {getStatusBadge(selectedTransaction.orderStatus)}
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Payout Status</Label>
+                    <div className="mt-1">{getPayoutStatusBadge(selectedTransaction.payoutStatus)}</div>
+                  </div>
+                </div>
+
+                {selectedTransaction.payoutBatchId && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <Label>Payout Batch ID</Label>
+                    <p className="font-mono text-sm">{selectedTransaction.payoutBatchId}</p>
+                  </div>
+                )}
+
                 <div>
-                  <Label>Payout Status</Label>
-                  <div className="mt-1">{getPayoutStatusBadge(selectedTransaction.payoutStatus)}</div>
+                  <Label>Description</Label>
+                  <p className="text-gray-700">{selectedTransaction.description}</p>
+                </div>
+
+                <div>
+                  <Label>Timestamp</Label>
+                  <p className="font-semibold">
+                    {selectedTransaction.timestamp.toLocaleDateString()} at {selectedTransaction.timestamp.toLocaleTimeString()}
+                  </p>
                 </div>
               </div>
+            </DialogContent>
+          </Dialog>
+        )
+      }
 
-              {selectedTransaction.payoutBatchId && (
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <Label>Payout Batch ID</Label>
-                  <p className="font-mono text-sm">{selectedTransaction.payoutBatchId}</p>
-                </div>
-              )}
 
-              <div>
-                <Label>Description</Label>
-                <p className="text-gray-700">{selectedTransaction.description}</p>
-              </div>
-
-              <div>
-                <Label>Timestamp</Label>
-                <p className="font-semibold">
-                  {selectedTransaction.timestamp.toLocaleDateString()} at {selectedTransaction.timestamp.toLocaleTimeString()}
-                </p>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {/* Payout Request Dialog */}
-      <Dialog open={isPayoutDialogOpen} onOpenChange={setIsPayoutDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Request Payout</DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div>
-              <Label>Available Balance</Label>
-              <p className="text-2xl font-bold text-green-600">₹{paymentSummary.pendingPayouts.toLocaleString()}</p>
-            </div>
-
-            <div>
-              <Label htmlFor="payoutAmount">Payout Amount (₹)</Label>
-              <Input
-                id="payoutAmount"
-                type="number"
-                value={payoutAmount}
-                onChange={(e) => setPayoutAmount(Number(e.target.value))}
-                placeholder="Enter amount"
-                max={paymentSummary.pendingPayouts}
-              />
-            </div>
-
-            <div>
-              <Label>Bank Account</Label>
-              <p className="text-gray-600">Funds will be transferred to your registered bank account ****1234</p>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsPayoutDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleRequestPayout}
-              disabled={payoutAmount <= 0 || payoutAmount > paymentSummary.pendingPayouts}
-              className="bg-orange-600 hover:bg-orange-700"
-            >
-              Request Payout
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Payout Details Dialog */}
-      {selectedPayout && (
-        <Dialog open={!!selectedPayout} onOpenChange={() => setSelectedPayout(null)}>
-          <DialogContent className="max-w-3xl">
-            <DialogHeader>
-              <DialogTitle>Payout Details - {selectedPayout.batchNumber}</DialogTitle>
-            </DialogHeader>
+      {
+        selectedPayout && (
+          <Dialog open={!!selectedPayout} onOpenChange={() => setSelectedPayout(null)}>
+            <DialogContent className="max-w-3xl">
+              <DialogHeader>
+                <DialogTitle>Payout Details - {selectedPayout.batchNumber}</DialogTitle>
+              </DialogHeader>
 
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Payout Date</Label>
-                  <p className="font-semibold">{selectedPayout.payoutDate.toLocaleDateString()}</p>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Payout Date</Label>
+                    <p className="font-semibold">{selectedPayout.payoutDate.toLocaleDateString()}</p>
+                  </div>
+                  <div>
+                    <Label>Amount</Label>
+                    <p className="text-2xl font-bold text-green-600">₹{selectedPayout.amount.toLocaleString()}</p>
+                  </div>
                 </div>
+
+                {selectedPayout.utrNumber && (
+                  <div>
+                    <Label>UTR Number</Label>
+                    <p className="font-mono font-semibold">{selectedPayout.utrNumber}</p>
+                  </div>
+                )}
+
                 <div>
-                  <Label>Amount</Label>
-                  <p className="text-2xl font-bold text-green-600">₹{selectedPayout.amount.toLocaleString()}</p>
+                  <Label>Orders Included ({selectedPayout.orderCount})</Label>
+                  <div className="mt-2 max-h-48 overflow-y-auto space-y-2">
+                    {selectedPayout.orderIds.map((orderId, index) => (
+                      <div key={orderId} className="p-2 bg-gray-50 rounded text-sm font-mono">
+                        {index + 1}. {orderId}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-
-              {selectedPayout.utrNumber && (
-                <div>
-                  <Label>UTR Number</Label>
-                  <p className="font-mono font-semibold">{selectedPayout.utrNumber}</p>
-                </div>
-              )}
-
-              <div>
-                <Label>Orders Included ({selectedPayout.orderCount})</Label>
-                <div className="mt-2 max-h-48 overflow-y-auto space-y-2">
-                  {selectedPayout.orderIds.map((orderId, index) => (
-                    <div key={orderId} className="p-2 bg-gray-50 rounded text-sm font-mono">
-                      {index + 1}. {orderId}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-    </div>
+            </DialogContent>
+          </Dialog>
+        )
+      }
+    </div >
   );
 }

@@ -29,7 +29,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/auth-context';
-import { getAllTransactionsForAdmin, getAllPayoutRequestsForAdmin } from '@/lib/firebase/admin';
+import { getAllTransactionsForAdmin, getAllPayoutRequestsForAdmin, updatePayoutStatus } from '@/lib/firebase/admin';
 import {
   calculateVendorPendingBalances,
   generatePayoutBatch,
@@ -68,6 +68,7 @@ export default function PaymentsTransactions() {
   const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
   const [vendorBalances, setVendorBalances] = useState<VendorBalance[]>([]);
   const [payoutBatches, setPayoutBatches] = useState<PayoutBatch[]>([]);
+  const [payoutRequests, setPayoutRequests] = useState<any[]>([]);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [activeTab, setActiveTab] = useState<'transactions' | 'payouts' | 'batches' | 'analytics'>('transactions');
   const [searchQuery, setSearchQuery] = useState('');
@@ -98,15 +99,17 @@ export default function PaymentsTransactions() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [transactionsData, balancesData, batchesData] = await Promise.all([
+      const [transactionsData, balancesData, batchesData, requestsData] = await Promise.all([
         getAllTransactionsForAdmin(),
         calculateVendorPendingBalances(),
-        getAllPayoutBatches()
+        getAllPayoutBatches(),
+        getAllPayoutRequestsForAdmin()
       ]);
 
       setTransactions(transactionsData as Transaction[]);
       setVendorBalances(balancesData);
       setPayoutBatches(batchesData);
+      setPayoutRequests(requestsData);
 
       toast.success(`Loaded ${transactionsData.length} transactions`);
     } catch (error) {
@@ -235,6 +238,28 @@ export default function PaymentsTransactions() {
     }
   };
 
+  const handleApprovePayoutRequest = async (requestId: string) => {
+    try {
+      await updatePayoutStatus(requestId, 'approved', user?.uid || 'admin');
+      toast.success('Payout request approved');
+      loadData();
+    } catch (error) {
+      console.error('Error approving payout request:', error);
+      toast.error('Failed to approve payout request');
+    }
+  };
+
+  const handleRejectPayoutRequest = async (requestId: string) => {
+    try {
+      await updatePayoutStatus(requestId, 'rejected', user?.uid || 'admin');
+      toast.success('Payout request rejected');
+      loadData();
+    } catch (error) {
+      console.error('Error rejecting payout request:', error);
+      toast.error('Failed to reject payout request');
+    }
+  };
+
   const handleMetricCardClick = (metric: string) => {
     switch (metric) {
       case 'revenue':
@@ -265,6 +290,8 @@ export default function PaymentsTransactions() {
       processing: <Badge className="bg-yellow-100 text-yellow-800">Processing</Badge>,
       paid: <Badge className="bg-green-100 text-green-800">Paid</Badge>,
       completed: <Badge className="bg-green-100 text-green-800">Paid</Badge>,
+      approved: <Badge className="bg-green-100 text-green-800">Approved</Badge>,
+      rejected: <Badge variant="destructive">Rejected</Badge>,
       failed: <Badge variant="destructive">Failed</Badge>
     };
     return variants[status as keyof typeof variants] || variants.pending;
@@ -406,7 +433,7 @@ export default function PaymentsTransactions() {
 
       {/* Tabs */}
       <div className="flex gap-4 border-b">
-        {['transactions', 'payouts', 'batches', 'analytics'].map((tab) => (
+        {['transactions', 'batches', 'analytics'].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab as any)}
@@ -627,6 +654,8 @@ export default function PaymentsTransactions() {
           )}
         </div>
       )}
+
+
 
       {/* Payout Batches Tab */}
       {activeTab === 'batches' && (

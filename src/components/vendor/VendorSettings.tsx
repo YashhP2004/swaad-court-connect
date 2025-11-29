@@ -642,12 +642,12 @@ export default function VendorSettings() {
                   </div>
 
                   <Switch
-                    checked={restaurantProfile.openingHours[day].isOpen}
+                    checked={restaurantProfile.openingHours?.[day]?.isOpen || false}
                     onCheckedChange={(checked) => updateOpeningHours(day, 'isOpen', checked)}
                     disabled={!isEditing}
                   />
 
-                  {restaurantProfile.openingHours[day].isOpen ? (
+                  {restaurantProfile.openingHours?.[day]?.isOpen ? (
                     <div className="flex items-center gap-2">
                       <Input
                         type="time"

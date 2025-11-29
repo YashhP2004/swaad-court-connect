@@ -13,7 +13,8 @@ import {
   Activity,
   Target,
   Award,
-  Clock
+  Clock,
+  RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,7 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/context/auth-context';
-import { getVendorAnalytics } from '@/lib/firebase';
+import { getVendorAnalytics, getVendorProfile } from '@/lib/firebase';
 
 interface SalesData {
   period: string;
@@ -73,15 +74,22 @@ export default function SalesAnalytics() {
 
   const loadAnalyticsData = async () => {
     if (!user?.uid) return;
-    
+
     setIsLoading(true);
     try {
-      const analyticsData = await getVendorAnalytics(user.uid, timeRange);
-      setSalesData(analyticsData.salesData);
-      setTopProducts(analyticsData.topProducts);
-      setRevenueMetrics(analyticsData.revenueMetrics);
+      let restaurantId = user.uid;
+      try { const profile = await getVendorProfile(user.uid); if (profile?.restaurantId) restaurantId = profile.restaurantId; } catch (e) { console.warn('Using uid as restaurantId'); }
+      console.log(' Fetching analytics for:', restaurantId);
+      const analyticsData = await getVendorAnalytics(restaurantId, timeRange);
+      console.log(' Data received:', analyticsData);
+      setSalesData(analyticsData?.salesData || []);
+      setTopProducts(analyticsData?.topProducts || []);
+      setRevenueMetrics({ totalRevenue: analyticsData?.totalRevenue || 0, totalOrders: analyticsData?.totalOrders || 0, avgOrderValue: analyticsData?.avgOrderValue || 0, totalCustomers: analyticsData?.totalCustomers || 0, growthRate: analyticsData?.growthRate || 0, completionRate: analyticsData?.completionRate || 100 });
     } catch (error) {
-      console.error('Error loading analytics data:', error);
+      console.error(' Error:', error);
+      setSalesData([]);
+      setTopProducts([]);
+      setRevenueMetrics({ totalRevenue: 0, totalOrders: 0, avgOrderValue: 0, totalCustomers: 0, growthRate: 0, completionRate: 0 });
     } finally {
       setIsLoading(false);
     }
@@ -109,7 +117,7 @@ export default function SalesAnalytics() {
           <h2 className="text-2xl font-bold text-gray-900">Sales Analytics</h2>
           <p className="text-gray-600">Track your restaurant's performance and growth</p>
         </div>
-        
+
         <div className="flex gap-3">
           <Select value={timeRange} onValueChange={setTimeRange}>
             <SelectTrigger className="w-40">
@@ -122,7 +130,12 @@ export default function SalesAnalytics() {
               <SelectItem value="1y">Last Year</SelectItem>
             </SelectContent>
           </Select>
-          
+
+          <Button variant="outline" onClick={loadAnalyticsData} disabled={isLoading} className="gap-2">
+            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+
           <Button variant="outline" onClick={exportReport} className="gap-2">
             <Download className="w-4 h-4" />
             Export Report
@@ -355,7 +368,7 @@ export default function SalesAnalytics() {
                         <p className="text-sm text-gray-600">{product.category}</p>
                       </div>
                     </div>
-                    
+
                     <div className="text-right">
                       <p className="font-bold text-green-600">₹{product.revenue.toLocaleString()}</p>
                       <p className="text-sm text-gray-600">{product.totalSold} sold</p>
@@ -381,7 +394,7 @@ export default function SalesAnalytics() {
                   </div>
                   <Progress value={(revenueMetrics.totalRevenue / 50000) * 100} className="h-2" />
                 </div>
-                
+
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm font-medium">Order Completion Rate</span>
@@ -389,7 +402,7 @@ export default function SalesAnalytics() {
                   </div>
                   <Progress value={revenueMetrics.completionRate} className="h-2" />
                 </div>
-                
+
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm font-medium">Customer Satisfaction</span>
@@ -415,7 +428,7 @@ export default function SalesAnalytics() {
                       Your revenue increased by {revenueMetrics.growthRate}% compared to last period. Keep up the great work!
                     </p>
                   </div>
-                  
+
                   <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
                       <Clock className="w-4 h-4 text-blue-600" />
@@ -425,7 +438,7 @@ export default function SalesAnalytics() {
                       Most orders come between 7-9 PM. Consider running promotions during slower hours.
                     </p>
                   </div>
-                  
+
                   <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
                       <Award className="w-4 h-4 text-amber-600" />

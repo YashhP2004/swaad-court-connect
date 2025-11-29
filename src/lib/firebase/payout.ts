@@ -541,23 +541,26 @@ export async function requestVendorPayout(
     try {
         const requestId = doc(collection(db, 'payoutRequests')).id;
 
-        // Get vendor info
-        const vendorRef = doc(db, 'vendors', vendorId);
-        const vendorDoc = await getDoc(vendorRef);
+        // Get vendor info from users collection (vendors are users with role='vendor')
+        const userRef = doc(db, 'users', vendorId);
+        const userDoc = await getDoc(userRef);
 
-        if (!vendorDoc.exists()) {
+        if (!userDoc.exists()) {
             throw new Error('Vendor not found');
         }
 
-        const vendorData = vendorDoc.data();
+        const userData = userDoc.data();
+
+        // Get restaurantId from user data
+        const restaurantId = userData.restaurantId || vendorId;
 
         await setDoc(doc(db, 'payoutRequests', requestId), {
-            restaurantId: vendorId,
-            restaurantName: vendorData.name || 'Unknown Vendor',
+            restaurantId: restaurantId,
+            restaurantName: userData.businessName || userData.name || 'Unknown Vendor',
             amount,
             status: 'pending',
             requestedAt: Timestamp.now(),
-            bankDetails: bankDetails || vendorData.bankDetails || {}
+            bankDetails: bankDetails || userData.bankDetails || {}
         });
 
         return requestId;
@@ -597,5 +600,55 @@ export async function getAllPayoutBatches(): Promise<PayoutBatch[]> {
     } catch (error) {
         console.error('Error getting all payout batches:', error);
         throw error;
+    }
+}
+
+/**
+ * Get payout requests for a vendor
+ */
+export async function getVendorPayoutRequests(restaurantId: string) {
+    try {
+        const payoutRequestsRef = collection(db, 'payoutRequests');
+        const q = query(
+            payoutRequestsRef,
+            where('restaurantId', '==', restaurantId),
+            orderBy('requestedAt', 'desc')
+        );
+
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                requestedAt: data.requestedAt?.toDate ? data.requestedAt.toDate() : new Date(data.requestedAt || Date.now()),
+                processedAt: data.processedAt?.toDate ? data.processedAt.toDate() : (data.processedAt ? new Date(data.processedAt) : undefined)
+            };
+        });
+    } catch (error) {
+        // If index is missing, try without orderBy
+        try {
+            const payoutRequestsRef = collection(db, 'payoutRequests');
+            const q = query(
+                payoutRequestsRef,
+                where('restaurantId', '==', restaurantId)
+            );
+
+            const snapshot = await getDocs(q);
+            const results = snapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    ...data,
+                    requestedAt: data.requestedAt?.toDate ? data.requestedAt.toDate() : new Date(data.requestedAt || Date.now()),
+                    processedAt: data.processedAt?.toDate ? data.processedAt.toDate() : (data.processedAt ? new Date(data.processedAt) : undefined)
+                };
+            });
+
+            return results.sort((a: any, b: any) => b.requestedAt.getTime() - a.requestedAt.getTime());
+        } catch (innerError) {
+            console.error('Error getting vendor payout requests:', innerError);
+            throw innerError;
+        }
     }
 }

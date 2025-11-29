@@ -250,6 +250,7 @@ export async function addMenuCategory(vendorId: string, category: any): Promise<
 
 export async function getVendorAnalytics(vendorId: string, dateRange: string): Promise<any> {
     try {
+        console.log('📊 getVendorAnalytics called for:', vendorId, dateRange);
         const now = new Date();
         let startDate: Date;
 
@@ -263,51 +264,84 @@ export async function getVendorAnalytics(vendorId: string, dateRange: string): P
             case '90d':
                 startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
                 break;
+            case '1y':
+                startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+                break;
             default:
                 startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         }
 
+        // Query ONLY by restaurantId to debug filtering issues
         const ordersRef = collection(db, 'orders');
-        let q = query(
-            ordersRef,
-            where('restaurantId', '==', vendorId),
-            where('createdAt', '>=', Timestamp.fromDate(startDate)),
-            where('status', '==', 'completed')
-        );
+        const q = query(ordersRef, where('restaurantId', '==', vendorId));
 
         const snapshot = await getDocs(q);
-        const orders = snapshot.docs.map(doc => doc.data());
+        const allOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        console.log(`📦 Total orders found for ${vendorId}:`, allOrders.length);
+
+        if (allOrders.length > 0) {
+            console.log('🔍 Sample order status:', (allOrders[0] as any).status);
+            console.log('🔍 Sample order date:', (allOrders[0] as any).createdAt?.toDate?.());
+        }
+
+        // Filter in memory
+        const orders = allOrders.filter(order => {
+            const orderDate = (order as any).createdAt?.toDate?.();
+            const status = (order as any).status;
+
+            const isDateValid = orderDate && orderDate >= startDate;
+            const isStatusValid = ['completed', 'delivered'].includes(status?.toLowerCase());
+
+            return isDateValid && isStatusValid;
+        });
+
+        console.log(`✅ Orders after filtering (Date >= ${startDate.toISOString()} AND Status is completed/delivered):`, orders.length);
 
         // Calculate analytics
         const totalRevenue = orders.reduce((sum, order) => sum + ((order as any).pricing?.totalAmount || (order as any).totalAmount || 0), 0);
         const totalOrders = orders.length;
-        const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+        const avgOrderValue = totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
 
         // Group by date for charts
         const dailyData = orders.reduce((acc, order) => {
-            const date = order.createdAt.toDate().toDateString();
+            const date = (order as any).createdAt.toDate().toDateString();
             if (!acc[date]) {
                 acc[date] = { revenue: 0, orders: 0, customers: new Set() };
             }
             acc[date].revenue += ((order as any).pricing?.totalAmount || (order as any).totalAmount || 0);
             acc[date].orders += 1;
-            acc[date].customers.add(order.userId);
+            acc[date].customers.add((order as any).userId || (order as any).customerId);
             return acc;
         }, {});
 
         const salesData = Object.entries(dailyData).map(([date, data]: [string, any]) => ({
-            period: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
+            period: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
             revenue: data.revenue,
             orders: data.orders,
             customers: data.customers.size
         }));
 
-        return {
+        const uniqueCustomers = new Set(orders.map(order => (order as any).userId || (order as any).customerId));
+        const totalCustomers = uniqueCustomers.size;
+        const growthRate = 0;
+        const completionRate = allOrders.length > 0 ? Math.round((orders.length / allOrders.length) * 100) : 0;
+
+        const productSales: Record<string, any> = {};
+        orders.forEach(order => { ((order as any).items || []).forEach((item: any) => { const id = item.id || item.name; if (!productSales[id]) productSales[id] = { id, name: item.name || 'Unknown', category: item.category || 'Uncategorized', totalSold: 0, revenue: 0, isVeg: item.isVeg !== undefined ? item.isVeg : true }; productSales[id].totalSold += item.quantity || 1; productSales[id].revenue += (item.price || 0) * (item.quantity || 1); }); });
+        const topProducts = Object.values(productSales).sort((a: any, b: any) => b.revenue - a.revenue).slice(0, 10);
+
+        const result = {
             totalRevenue,
             totalOrders,
             avgOrderValue,
-            salesData
+            totalCustomers,
+            growthRate,
+            completionRate,
+            salesData,
+            topProducts
         };
+        console.log('📈 Final Analytics Result:', result);
+        return result;
     } catch (error) {
         console.error('Error fetching vendor analytics:', error);
         throw error;
@@ -405,28 +439,6 @@ export async function createPayoutRequest(vendorId: string, amount: number): Pro
         return docRef.id;
     } catch (error) {
         console.error('Error creating payout request:', error);
-        throw error;
-    }
-}
-
-export async function getVendorPayoutRequests(vendorId: string): Promise<any[]> {
-    try {
-        const payoutRef = collection(db, 'payoutRequests');
-        let q = query(
-            payoutRef,
-            where('vendorId', '==', vendorId),
-            orderBy('createdAt', 'desc')
-        );
-
-        const snapshot = await getDocs(q);
-        return snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            requestDate: doc.data().requestDate.toDate(),
-            expectedDate: doc.data().expectedDate.toDate()
-        }));
-    } catch (error) {
-        console.error('Error fetching payout requests:', error);
         throw error;
     }
 }
