@@ -12,7 +12,9 @@ import {
     limit,
     Timestamp,
     collectionGroup,
-    writeBatch
+    writeBatch,
+    getCountFromServer,
+    addDoc
 } from 'firebase/firestore';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { db, auth } from './config';
@@ -1019,3 +1021,310 @@ export async function getPlatformSettings() {
         throw error;
     }
 };
+
+export async function getAdminAnalytics(dateRange: string = '7d') {
+    try {
+        const now = new Date();
+        let startDate: Date;
+        let previousStartDate: Date;
+
+        // Calculate date ranges
+        switch (dateRange) {
+            case '7d':
+                startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                previousStartDate = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+                break;
+            case '30d':
+                startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                previousStartDate = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+                break;
+            case '90d':
+                startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+                previousStartDate = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+                break;
+            case '1y':
+                startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+                previousStartDate = new Date(now.getTime() - 730 * 24 * 60 * 60 * 1000);
+                break;
+            default:
+                startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                previousStartDate = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+        }
+
+        const [ordersSnap, usersSnap, restaurantsSnap] = await Promise.all([
+            getDocs(query(collection(db, 'orders'), where('createdAt', '>=', Timestamp.fromDate(previousStartDate)))),
+            getDocs(query(collection(db, 'users'), where('createdAt', '>=', Timestamp.fromDate(previousStartDate)))),
+            getDocs(collection(db, 'restaurants'))
+        ]);
+
+        // Helper to safely parse dates
+        const parseDate = (date: any) => {
+            if (!date) return new Date(0);
+            if (date.toDate && typeof date.toDate === 'function') return date.toDate();
+            if (date instanceof Date) return date;
+            if (typeof date === 'number') return new Date(date);
+            if (typeof date === 'string') return new Date(date);
+            if (date.seconds) return new Date(date.seconds * 1000);
+            return new Date(0);
+        };
+
+        // Process Orders
+        const currentOrders = ordersSnap.docs.filter(doc => parseDate(doc.data().createdAt) >= startDate);
+        const previousOrders = ordersSnap.docs.filter(doc => {
+            const date = parseDate(doc.data().createdAt);
+            return date >= previousStartDate && date < startDate;
+        });
+
+        // Calculate Revenue
+        const calculateRevenue = (docs: any[]) => docs.reduce((sum, doc) => {
+            const data = doc.data();
+            const isPaid = ['completed', 'paid', 'success'].includes((data.payment?.status || data.paymentStatus || '').toLowerCase());
+            const isCompleted = ['delivered', 'collected', 'completed'].includes((data.status || '').toLowerCase());
+
+            if (isPaid || isCompleted) {
+                return sum + (data.pricing?.totalAmount || data.totalAmount || 0);
+            }
+            return sum;
+        }, 0);
+
+        const currentRevenue = calculateRevenue(currentOrders);
+        const previousRevenue = calculateRevenue(previousOrders);
+
+        // Calculate Counts
+        const totalOrders = currentOrders.length;
+        const previousTotalOrders = previousOrders.length;
+
+        // Process Users
+        const currentUsers = usersSnap.docs.filter(doc => parseDate(doc.data().createdAt) >= startDate);
+        const previousUsers = usersSnap.docs.filter(doc => {
+            const date = parseDate(doc.data().createdAt);
+            return date >= previousStartDate && date < startDate;
+        });
+
+        // Get Totals efficiently
+        const totalUsersSnap = await getCountFromServer(collection(db, 'users'));
+        const totalUsersCount = totalUsersSnap.data().count;
+
+        const totalRestaurants = restaurantsSnap.size;
+
+        // Calculate Growth
+        const calculateGrowth = (current: number, previous: number) => {
+            if (previous === 0) return current > 0 ? 100 : 0;
+            return Math.round(((current - previous) / previous) * 100 * 10) / 10;
+        };
+
+        const revenueGrowth = calculateGrowth(currentRevenue, previousRevenue);
+        const orderGrowth = calculateGrowth(totalOrders, previousTotalOrders);
+        const userGrowth = calculateGrowth(currentUsers.length, previousUsers.length);
+
+        const currentRestaurants = restaurantsSnap.docs.filter(doc => {
+            const data = doc.data();
+            return data.createdAt && parseDate(data.createdAt) >= startDate;
+        });
+        const previousRestaurants = restaurantsSnap.docs.filter(doc => {
+            const data = doc.data();
+            return data.createdAt && parseDate(data.createdAt) >= previousStartDate && parseDate(data.createdAt) < startDate;
+        });
+        const restaurantGrowth = calculateGrowth(currentRestaurants.length, previousRestaurants.length);
+
+        // Chart Data (Daily)
+        const chartDataMap = new Map<string, { date: string, revenue: number, orders: number, users: number }>();
+
+        for (let d = new Date(startDate); d <= now; d.setDate(d.getDate() + 1)) {
+            const dateStr = d.toISOString().split('T')[0];
+            chartDataMap.set(dateStr, { date: dateStr, revenue: 0, orders: 0, users: 0 });
+        }
+
+        currentOrders.forEach(doc => {
+            const data = doc.data();
+            const dateStr = parseDate(data.createdAt).toISOString().split('T')[0];
+            if (chartDataMap.has(dateStr)) {
+                const entry = chartDataMap.get(dateStr)!;
+                entry.orders += 1;
+
+                const isPaid = ['completed', 'paid', 'success'].includes((data.payment?.status || data.paymentStatus || '').toLowerCase());
+                const isCompleted = ['delivered', 'collected', 'completed'].includes((data.status || '').toLowerCase());
+                if (isPaid || isCompleted) {
+                    entry.revenue += (data.pricing?.totalAmount || data.totalAmount || 0);
+                }
+            }
+        });
+
+        currentUsers.forEach(doc => {
+            const dateStr = parseDate(doc.data().createdAt).toISOString().split('T')[0];
+            if (chartDataMap.has(dateStr)) {
+                chartDataMap.get(dateStr)!.users += 1;
+            }
+        });
+
+        const chartData = Array.from(chartDataMap.values()).sort((a, b) => a.date.localeCompare(b.date));
+
+        // Top Performers
+        const restaurantPerformance = new Map<string, { name: string, revenue: number, orders: number }>();
+        const dishPerformance = new Map<string, { name: string, count: number, revenue: number }>();
+
+        currentOrders.forEach(doc => {
+            const data = doc.data();
+            const restId = data.restaurantId;
+            const restName = data.restaurantName || 'Unknown';
+
+            if (!restaurantPerformance.has(restId)) {
+                restaurantPerformance.set(restId, { name: restName, revenue: 0, orders: 0 });
+            }
+
+            const restEntry = restaurantPerformance.get(restId)!;
+            restEntry.orders += 1;
+
+            const isPaid = ['completed', 'paid', 'success'].includes((data.payment?.status || data.paymentStatus || '').toLowerCase());
+            if (isPaid) {
+                restEntry.revenue += (data.pricing?.totalAmount || data.totalAmount || 0);
+            }
+
+            if (data.items && Array.isArray(data.items)) {
+                data.items.forEach((item: any) => {
+                    const dishId = item.id || item.name;
+                    const dishName = item.name;
+                    const quantity = Number(item.quantity) || 1;
+                    const price = Number(item.price || item.unitPrice || 0);
+
+                    if (!dishPerformance.has(dishId)) {
+                        dishPerformance.set(dishId, { name: dishName, count: 0, revenue: 0 });
+                    }
+                    const dishEntry = dishPerformance.get(dishId)!;
+                    dishEntry.count += quantity;
+                    dishEntry.revenue += (price * quantity);
+                });
+            }
+        });
+
+        const topRestaurants = Array.from(restaurantPerformance.entries())
+            .map(([id, data]) => ({ id, name: data.name, value: data.revenue, growth: 0 }))
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 5);
+
+        const topDishes = Array.from(dishPerformance.entries())
+            .map(([id, data]) => ({ id, name: data.name, value: data.count, growth: 0 }))
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 5);
+
+        return {
+            analyticsData: {
+                totalRevenue: currentRevenue,
+                totalOrders: totalOrders,
+                totalUsers: totalUsersCount,
+                totalRestaurants: totalRestaurants,
+                revenueGrowth,
+                orderGrowth,
+                userGrowth,
+                restaurantGrowth
+            },
+            chartData,
+            topRestaurants,
+            topDishes
+        };
+    } catch (error) {
+        console.error('Error getting admin analytics:', error);
+        throw error;
+    }
+};
+
+
+// Notifications & Communications
+export async function getAdminNotifications() {
+    try {
+        const q = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'));
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
+                scheduledAt: data.scheduledAt?.toDate ? data.scheduledAt.toDate() : undefined,
+                sentAt: data.sentAt?.toDate ? data.sentAt.toDate() : undefined
+            };
+        });
+    } catch (error) {
+        console.error('Error getting notifications:', error);
+        throw error;
+    }
+}
+
+export async function createAdminNotification(data: any) {
+    try {
+        const notificationData: any = {
+            ...data,
+            createdAt: Timestamp.now(),
+            readCount: 0,
+            status: data.scheduledAt ? 'scheduled' : 'sent'
+        };
+
+        if (data.scheduledAt) {
+            notificationData.scheduledAt = Timestamp.fromDate(new Date(data.scheduledAt));
+        } else {
+            notificationData.sentAt = Timestamp.now();
+        }
+
+        const docRef = await addDoc(collection(db, 'notifications'), notificationData);
+        return {
+            id: docRef.id,
+            ...notificationData,
+            createdAt: notificationData.createdAt.toDate(),
+            scheduledAt: notificationData.scheduledAt?.toDate(),
+            sentAt: notificationData.sentAt?.toDate()
+        };
+    } catch (error) {
+        console.error('Error creating notification:', error);
+        throw error;
+    }
+}
+
+export async function getAdminMessages() {
+    try {
+        const q = query(collection(db, 'messages'), orderBy('createdAt', 'desc'));
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
+                updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : undefined
+            };
+        });
+    } catch (error) {
+        console.error('Error getting messages:', error);
+        throw error;
+    }
+}
+
+export async function updateMessageStatus(messageId: string, status: string) {
+    try {
+        const msgRef = doc(db, 'messages', messageId);
+        await updateDoc(msgRef, {
+            status,
+            updatedAt: Timestamp.now()
+        });
+    } catch (error) {
+        console.error('Error updating message status:', error);
+        throw error;
+    }
+}
+
+export async function replyToMessage(messageId: string, replyContent: string) {
+    try {
+        const msgRef = doc(db, 'messages', messageId);
+
+        await updateDoc(msgRef, {
+            status: 'replied',
+            updatedAt: Timestamp.now(),
+            reply: {
+                content: replyContent,
+                createdAt: Timestamp.now()
+            }
+        });
+    } catch (error) {
+        console.error('Error replying to message:', error);
+        throw error;
+    }
+}

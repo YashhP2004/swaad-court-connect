@@ -2,23 +2,31 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  BarChart3, 
-  TrendingUp, 
-  TrendingDown, 
-  Users, 
-  Store, 
-  ShoppingCart, 
+import {
+  TrendingUp,
+  TrendingDown,
+  Users,
+  Store,
+  ShoppingCart,
   DollarSign,
   Download,
-  Calendar,
-  Filter,
   RefreshCw
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { getAdminAnalytics } from '@/lib/firebase/admin';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  AreaChart,
+  Area
+} from 'recharts';
 
 interface AnalyticsData {
   totalRevenue: number;
@@ -60,49 +68,13 @@ export default function AnalyticsReports() {
   const loadAnalytics = async () => {
     setIsLoading(true);
     try {
-      // Mock data - replace with Firebase queries
-      const mockAnalytics: AnalyticsData = {
-        totalRevenue: 125430,
-        totalOrders: 1247,
-        totalUsers: 3456,
-        totalRestaurants: 89,
-        revenueGrowth: 12.5,
-        orderGrowth: 8.3,
-        userGrowth: 15.2,
-        restaurantGrowth: 5.7
-      };
-
-      const mockChartData: ChartData[] = [
-        { date: '2024-01-01', revenue: 15000, orders: 150, users: 45 },
-        { date: '2024-01-02', revenue: 18000, orders: 180, users: 52 },
-        { date: '2024-01-03', revenue: 22000, orders: 220, users: 38 },
-        { date: '2024-01-04', revenue: 19000, orders: 190, users: 61 },
-        { date: '2024-01-05', revenue: 25000, orders: 250, users: 47 },
-        { date: '2024-01-06', revenue: 21000, orders: 210, users: 55 },
-        { date: '2024-01-07', revenue: 23000, orders: 230, users: 43 }
-      ];
-
-      const mockTopRestaurants: TopPerformer[] = [
-        { id: '1', name: 'Pizza Palace', value: 25430, growth: 18.5 },
-        { id: '2', name: 'Burger Barn', value: 22100, growth: 12.3 },
-        { id: '3', name: 'Spice Garden', value: 19800, growth: 15.7 },
-        { id: '4', name: 'Pasta Point', value: 17650, growth: 8.9 },
-        { id: '5', name: 'Taco Town', value: 16200, growth: 22.1 }
-      ];
-
-      const mockTopDishes: TopPerformer[] = [
-        { id: '1', name: 'Margherita Pizza', value: 456, growth: 25.3 },
-        { id: '2', name: 'Chicken Burger', value: 389, growth: 18.7 },
-        { id: '3', name: 'Biryani Special', value: 334, growth: 31.2 },
-        { id: '4', name: 'Pasta Alfredo', value: 298, growth: 12.8 },
-        { id: '5', name: 'Fish Tacos', value: 267, growth: 19.4 }
-      ];
-
-      setAnalyticsData(mockAnalytics);
-      setChartData(mockChartData);
-      setTopRestaurants(mockTopRestaurants);
-      setTopDishes(mockTopDishes);
+      const data = await getAdminAnalytics(dateRange);
+      setAnalyticsData(data.analyticsData);
+      setChartData(data.chartData);
+      setTopRestaurants(data.topRestaurants);
+      setTopDishes(data.topDishes);
     } catch (error) {
+      console.error('Error loading analytics:', error);
       toast.error('Failed to load analytics data');
     } finally {
       setIsLoading(false);
@@ -110,13 +82,57 @@ export default function AnalyticsReports() {
   };
 
   const exportReport = (type: string) => {
-    toast.success(`${type} report exported successfully`);
+    try {
+      let csvContent = '';
+      let filename = '';
+
+      if (type === 'Revenue') {
+        const headers = ['Date', 'Revenue', 'Orders'];
+        csvContent = [
+          headers.join(','),
+          ...chartData.map(item => [
+            item.date,
+            item.revenue,
+            item.orders
+          ].join(','))
+        ].join('\n');
+        filename = `revenue_report_${dateRange}_${new Date().toISOString().split('T')[0]}.csv`;
+      } else if (type === 'Orders') {
+        const headers = ['Date', 'Orders', 'Users'];
+        csvContent = [
+          headers.join(','),
+          ...chartData.map(item => [
+            item.date,
+            item.orders,
+            item.users
+          ].join(','))
+        ].join('\n');
+        filename = `orders_report_${dateRange}_${new Date().toISOString().split('T')[0]}.csv`;
+      }
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success(`${type} report exported successfully`);
+      }
+    } catch (error) {
+      console.error('Error exporting report:', error);
+      toast.error('Failed to export report');
+    }
   };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
-      currency: 'INR'
+      currency: 'INR',
+      maximumFractionDigits: 0
     }).format(amount);
   };
 
@@ -127,7 +143,8 @@ export default function AnalyticsReports() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <RefreshCw className="h-8 w-8 animate-spin" />
+        <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-3 text-muted-foreground">Loading analytics...</span>
       </div>
     );
   }
@@ -135,15 +152,15 @@ export default function AnalyticsReports() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Analytics & Reports</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Analytics & Reports</h1>
           <p className="text-muted-foreground">Platform performance insights and data analytics</p>
         </div>
         <div className="flex gap-3">
           <Select value={dateRange} onValueChange={setDateRange}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select period" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="7d">Last 7 days</SelectItem>
@@ -152,9 +169,8 @@ export default function AnalyticsReports() {
               <SelectItem value="1y">Last year</SelectItem>
             </SelectContent>
           </Select>
-          <Button onClick={() => loadAnalytics()} variant="outline">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
+          <Button onClick={() => loadAnalytics()} variant="outline" size="icon">
+            <RefreshCw className="h-4 w-4" />
           </Button>
         </div>
       </div>
@@ -168,13 +184,20 @@ export default function AnalyticsReports() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(analyticsData?.totalRevenue || 0)}</div>
-            <div className="flex items-center text-xs text-muted-foreground">
-              {analyticsData?.revenueGrowth && analyticsData.revenueGrowth > 0 ? (
-                <TrendingUp className="h-3 w-3 mr-1 text-green-500" />
-              ) : (
-                <TrendingDown className="h-3 w-3 mr-1 text-red-500" />
+            <div className="flex items-center text-xs text-muted-foreground mt-1">
+              {analyticsData?.revenueGrowth !== undefined && (
+                <>
+                  {analyticsData.revenueGrowth > 0 ? (
+                    <TrendingUp className="h-3 w-3 mr-1 text-green-500" />
+                  ) : (
+                    <TrendingDown className="h-3 w-3 mr-1 text-red-500" />
+                  )}
+                  <span className={analyticsData.revenueGrowth > 0 ? "text-green-500" : "text-red-500"}>
+                    {Math.abs(analyticsData.revenueGrowth)}%
+                  </span>
+                  <span className="ml-1">from last period</span>
+                </>
               )}
-              {analyticsData?.revenueGrowth}% from last period
             </div>
           </CardContent>
         </Card>
@@ -186,13 +209,20 @@ export default function AnalyticsReports() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatNumber(analyticsData?.totalOrders || 0)}</div>
-            <div className="flex items-center text-xs text-muted-foreground">
-              {analyticsData?.orderGrowth && analyticsData.orderGrowth > 0 ? (
-                <TrendingUp className="h-3 w-3 mr-1 text-green-500" />
-              ) : (
-                <TrendingDown className="h-3 w-3 mr-1 text-red-500" />
+            <div className="flex items-center text-xs text-muted-foreground mt-1">
+              {analyticsData?.orderGrowth !== undefined && (
+                <>
+                  {analyticsData.orderGrowth > 0 ? (
+                    <TrendingUp className="h-3 w-3 mr-1 text-green-500" />
+                  ) : (
+                    <TrendingDown className="h-3 w-3 mr-1 text-red-500" />
+                  )}
+                  <span className={analyticsData.orderGrowth > 0 ? "text-green-500" : "text-red-500"}>
+                    {Math.abs(analyticsData.orderGrowth)}%
+                  </span>
+                  <span className="ml-1">from last period</span>
+                </>
               )}
-              {analyticsData?.orderGrowth}% from last period
             </div>
           </CardContent>
         </Card>
@@ -204,31 +234,45 @@ export default function AnalyticsReports() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatNumber(analyticsData?.totalUsers || 0)}</div>
-            <div className="flex items-center text-xs text-muted-foreground">
-              {analyticsData?.userGrowth && analyticsData.userGrowth > 0 ? (
-                <TrendingUp className="h-3 w-3 mr-1 text-green-500" />
-              ) : (
-                <TrendingDown className="h-3 w-3 mr-1 text-red-500" />
+            <div className="flex items-center text-xs text-muted-foreground mt-1">
+              {analyticsData?.userGrowth !== undefined && (
+                <>
+                  {analyticsData.userGrowth > 0 ? (
+                    <TrendingUp className="h-3 w-3 mr-1 text-green-500" />
+                  ) : (
+                    <TrendingDown className="h-3 w-3 mr-1 text-red-500" />
+                  )}
+                  <span className={analyticsData.userGrowth > 0 ? "text-green-500" : "text-red-500"}>
+                    {Math.abs(analyticsData.userGrowth)}%
+                  </span>
+                  <span className="ml-1">from last period</span>
+                </>
               )}
-              {analyticsData?.userGrowth}% from last period
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Restaurants</CardTitle>
+            <CardTitle className="text-sm font-medium">Active Restaurants</CardTitle>
             <Store className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatNumber(analyticsData?.totalRestaurants || 0)}</div>
-            <div className="flex items-center text-xs text-muted-foreground">
-              {analyticsData?.restaurantGrowth && analyticsData.restaurantGrowth > 0 ? (
-                <TrendingUp className="h-3 w-3 mr-1 text-green-500" />
-              ) : (
-                <TrendingDown className="h-3 w-3 mr-1 text-red-500" />
+            <div className="flex items-center text-xs text-muted-foreground mt-1">
+              {analyticsData?.restaurantGrowth !== undefined && (
+                <>
+                  {analyticsData.restaurantGrowth > 0 ? (
+                    <TrendingUp className="h-3 w-3 mr-1 text-green-500" />
+                  ) : (
+                    <TrendingDown className="h-3 w-3 mr-1 text-red-500" />
+                  )}
+                  <span className={analyticsData.restaurantGrowth > 0 ? "text-green-500" : "text-red-500"}>
+                    {Math.abs(analyticsData.restaurantGrowth)}%
+                  </span>
+                  <span className="ml-1">from last period</span>
+                </>
               )}
-              {analyticsData?.restaurantGrowth}% from last period
             </div>
           </CardContent>
         </Card>
@@ -251,9 +295,42 @@ export default function AnalyticsReports() {
                 <CardDescription>Daily revenue over selected period</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-64 flex items-center justify-center text-muted-foreground">
-                  <BarChart3 className="h-12 w-12 mb-2" />
-                  <span>Chart visualization would go here</span>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData}>
+                      <defs>
+                        <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#f97316" stopOpacity={0.8} />
+                          <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis
+                        dataKey="date"
+                        tickFormatter={(value) => new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis
+                        tickFormatter={(value) => `₹${value}`}
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <Tooltip
+                        formatter={(value: number) => [`₹${value}`, 'Revenue']}
+                        labelFormatter={(label) => new Date(label).toLocaleDateString()}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="revenue"
+                        stroke="#f97316"
+                        fillOpacity={1}
+                        fill="url(#colorRevenue)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
                 </div>
               </CardContent>
             </Card>
@@ -264,9 +341,28 @@ export default function AnalyticsReports() {
                 <CardDescription>Daily orders over selected period</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-64 flex items-center justify-center text-muted-foreground">
-                  <BarChart3 className="h-12 w-12 mb-2" />
-                  <span>Chart visualization would go here</span>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis
+                        dataKey="date"
+                        tickFormatter={(value) => new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <Tooltip
+                        labelFormatter={(label) => new Date(label).toLocaleDateString()}
+                      />
+                      <Bar dataKey="orders" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </CardContent>
             </Card>
@@ -282,15 +378,38 @@ export default function AnalyticsReports() {
               </div>
               <Button onClick={() => exportReport('Revenue')} variant="outline">
                 <Download className="h-4 w-4 mr-2" />
-                Export
+                Export CSV
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="h-96 flex items-center justify-center text-muted-foreground">
-                <div className="text-center">
-                  <BarChart3 className="h-16 w-16 mx-auto mb-4" />
-                  <p>Detailed revenue charts and analytics would be displayed here</p>
-                </div>
+              <div className="h-[400px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData}>
+                    <defs>
+                      <linearGradient id="colorRevenue2" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#f97316" stopOpacity={0.8} />
+                        <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={(value) => new Date(value).toLocaleDateString()}
+                    />
+                    <YAxis tickFormatter={(value) => `₹${value}`} />
+                    <Tooltip
+                      formatter={(value: number) => [`₹${value}`, 'Revenue']}
+                      labelFormatter={(label) => new Date(label).toLocaleDateString()}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="revenue"
+                      stroke="#f97316"
+                      fillOpacity={1}
+                      fill="url(#colorRevenue2)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
@@ -305,15 +424,26 @@ export default function AnalyticsReports() {
               </div>
               <Button onClick={() => exportReport('Orders')} variant="outline">
                 <Download className="h-4 w-4 mr-2" />
-                Export
+                Export CSV
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="h-96 flex items-center justify-center text-muted-foreground">
-                <div className="text-center">
-                  <BarChart3 className="h-16 w-16 mx-auto mb-4" />
-                  <p>Order analytics and trend charts would be displayed here</p>
-                </div>
+              <div className="h-[400px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={(value) => new Date(value).toLocaleDateString()}
+                    />
+                    <YAxis />
+                    <Tooltip
+                      labelFormatter={(label) => new Date(label).toLocaleDateString()}
+                    />
+                    <Bar dataKey="orders" fill="#3b82f6" name="Orders" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="users" fill="#22c55e" name="Active Users" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
@@ -328,22 +458,28 @@ export default function AnalyticsReports() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {topRestaurants.map((restaurant, index) => (
-                    <div key={restaurant.id} className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
-                          {index + 1}
+                  {topRestaurants.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">No data available</div>
+                  ) : (
+                    topRestaurants.map((restaurant, index) => (
+                      <div key={restaurant.id} className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
+                            {index + 1}
+                          </div>
+                          <div>
+                            <p className="font-medium">{restaurant.name}</p>
+                            <p className="text-sm text-muted-foreground">{formatCurrency(restaurant.value)}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium">{restaurant.name}</p>
-                          <p className="text-sm text-muted-foreground">{formatCurrency(restaurant.value)}</p>
-                        </div>
+                        {restaurant.growth > 0 && (
+                          <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">
+                            +{restaurant.growth}%
+                          </Badge>
+                        )}
                       </div>
-                      <Badge variant={restaurant.growth > 0 ? "default" : "secondary"}>
-                        {restaurant.growth > 0 ? '+' : ''}{restaurant.growth}%
-                      </Badge>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -355,22 +491,28 @@ export default function AnalyticsReports() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {topDishes.map((dish, index) => (
-                    <div key={dish.id} className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
-                          {index + 1}
+                  {topDishes.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">No data available</div>
+                  ) : (
+                    topDishes.map((dish, index) => (
+                      <div key={dish.id} className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
+                            {index + 1}
+                          </div>
+                          <div>
+                            <p className="font-medium">{dish.name}</p>
+                            <p className="text-sm text-muted-foreground">{dish.value} orders</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium">{dish.name}</p>
-                          <p className="text-sm text-muted-foreground">{dish.value} orders</p>
-                        </div>
+                        {dish.growth > 0 && (
+                          <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">
+                            +{dish.growth}%
+                          </Badge>
+                        )}
                       </div>
-                      <Badge variant={dish.growth > 0 ? "default" : "secondary"}>
-                        {dish.growth > 0 ? '+' : ''}{dish.growth}%
-                      </Badge>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>
