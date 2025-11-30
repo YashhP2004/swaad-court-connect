@@ -292,30 +292,40 @@ export async function updateOrderStatus(orderId: string, status: VendorOrderStat
             note: `Vendor updated to ${status}`
         } as const;
 
-        await updateDoc(orderRef, {
+        const updateData: any = {
             status: userStatus,
             vendorStatus: status,
             updatedAt: timestamp,
             statusHistory: arrayUnion(statusHistoryEntry)
-        });
+        };
+
+        // Generate OTP when order is marked as ready
+        if (status === 'ready') {
+            const { generatePickupOTP, createPickupOTPData } = await import('./pickupOtp');
+            const otp = generatePickupOTP();
+            const otpData = await createPickupOTPData(otp);
+            updateData.pickupOTP = otpData;
+            console.log('🔐 Generated pickup OTP for order:', orderId, 'OTP:', otp);
+        }
+
+        await updateDoc(orderRef, updateData);
 
         const orderSnap = await getDoc(orderRef);
         if (orderSnap.exists()) {
             const orderData = orderSnap.data();
             const userOrdersRef = doc(db, `users/${orderData.userId}/orders`, orderId);
-            await updateDoc(userOrdersRef, {
-                status: userStatus,
-                vendorStatus: status,
-                updatedAt: timestamp,
-                statusHistory: arrayUnion(statusHistoryEntry)
-            }).catch(() => { });
+            await updateDoc(userOrdersRef, updateData).catch(() => { });
 
             try {
+                const notificationMessage = status === 'ready'
+                    ? `Your order #${orderId.slice(-6)} is ready for pickup! Check your OTP.`
+                    : `Your order #${orderId.slice(-6)} is now ${userStatus}`;
+
                 await addDoc(collection(db, 'notifications'), {
                     userId: orderData.userId,
                     type: 'order_status_update',
                     title: 'Order Status Updated',
-                    message: `Your order #${orderId.slice(-6)} is now ${userStatus}`,
+                    message: notificationMessage,
                     orderId: orderId,
                     isRead: false,
                     createdAt: timestamp
@@ -326,6 +336,49 @@ export async function updateOrderStatus(orderId: string, status: VendorOrderStat
         }
     } catch (error) {
         console.error('Error updating order status:', error);
+        throw error;
+    }
+}
+
+// Helper function to generate OTP for existing ready orders without OTP
+export async function generateOTPForReadyOrder(orderId: string): Promise<string> {
+    try {
+        const orderRef = doc(db, 'orders', orderId);
+        const orderSnap = await getDoc(orderRef);
+
+        if (!orderSnap.exists()) {
+            throw new Error('Order not found');
+        }
+
+        const orderData = orderSnap.data();
+
+        // Generate new OTP for ready orders (even if one already exists - for regeneration)
+        if (orderData.vendorStatus === 'ready') {
+            const { generatePickupOTP, createPickupOTPData } = await import('./pickupOtp');
+            const otp = generatePickupOTP();
+            const otpData = await createPickupOTPData(otp);
+
+            await updateDoc(orderRef, {
+                pickupOTP: otpData,
+                updatedAt: Timestamp.now()
+            });
+
+            // Also update user subcollection if it exists
+            if (orderData.userId) {
+                const userOrdersRef = doc(db, `users/${orderData.userId}/orders`, orderId);
+                await updateDoc(userOrdersRef, {
+                    pickupOTP: otpData,
+                    updatedAt: Timestamp.now()
+                }).catch(() => { });
+            }
+
+            console.log('🔐 Generated OTP for ready order:', orderId, 'OTP:', otp);
+            return otp;
+        }
+
+        return orderData.pickupOTP?.plainText || '';
+    } catch (error) {
+        console.error('Error generating OTP for ready order:', error);
         throw error;
     }
 }

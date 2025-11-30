@@ -86,6 +86,19 @@ export default function OrdersManagement() {
   const [isLoading, setIsLoading] = useState(true);
   const [vendorProfile, setVendorProfile] = useState<any>(null);
 
+  // OTP Verification State
+  const [isOtpDialogOpen, setIsOtpDialogOpen] = useState(false);
+  const [otpOrder, setOtpOrder] = useState<Order | null>(null);
+  const [otpInput, setOtpInput] = useState(['', '', '', '']);
+  const [otpError, setOtpError] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const otpInputRefs = [
+    React.useRef<HTMLInputElement>(null),
+    React.useRef<HTMLInputElement>(null),
+    React.useRef<HTMLInputElement>(null),
+    React.useRef<HTMLInputElement>(null)
+  ];
+
   // Real-time orders subscription
   useEffect(() => {
     if (!user?.uid) return;
@@ -165,6 +178,82 @@ export default function OrdersManagement() {
     } catch (error) {
       console.error('❌ Error updating order status:', error);
       toast.error('Failed to update order status');
+    }
+  };
+
+  // Handle OTP verification for order collection
+  const handleOpenOtpDialog = (order: Order) => {
+    setOtpOrder(order);
+    setOtpInput(['', '', '', '']);
+    setOtpError('');
+    setIsOtpDialogOpen(true);
+    // Focus first input after dialog opens
+    setTimeout(() => otpInputRefs[0].current?.focus(), 100);
+  };
+
+  const handleOtpInputChange = (index: number, value: string) => {
+    // Only allow digits
+    if (value && !/^\d$/.test(value)) return;
+
+    const newOtp = [...otpInput];
+    newOtp[index] = value;
+    setOtpInput(newOtp);
+    setOtpError('');
+
+    // Auto-focus next input
+    if (value && index < 3) {
+      otpInputRefs[index + 1].current?.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !otpInput[index] && index > 0) {
+      otpInputRefs[index - 1].current?.focus();
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otpOrder || !user?.uid) return;
+
+    const enteredOtp = otpInput.join('');
+    if (enteredOtp.length !== 4) {
+      setOtpError('Please enter complete 4-digit OTP');
+      return;
+    }
+
+    setIsVerifying(true);
+    setOtpError('');
+
+    try {
+      const { verifyPickupOTP } = await import('@/lib/firebase/pickupOtp');
+      const result = await verifyPickupOTP(otpOrder.id, enteredOtp);
+
+      if (result.success) {
+        // OTP verified successfully - mark order as collected
+        await updateOrderStatus(otpOrder.id, 'collected', user.uid);
+        toast.success('Order collected successfully!');
+        setIsOtpDialogOpen(false);
+        setOtpOrder(null);
+        setOtpInput(['', '', '', '']);
+      } else {
+        // OTP verification failed
+        setOtpError(result.message);
+        setOtpInput(['', '', '', '']);
+        otpInputRefs[0].current?.focus();
+
+        if (result.attemptsRemaining === 0) {
+          toast.error('Maximum attempts exceeded. Please contact support.');
+          setTimeout(() => {
+            setIsOtpDialogOpen(false);
+            setOtpOrder(null);
+          }, 2000);
+        }
+      }
+    } catch (error) {
+      console.error('Error verifying OTP:', error);
+      setOtpError('Failed to verify OTP. Please try again.');
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -524,11 +613,11 @@ export default function OrdersManagement() {
 
                       {order.vendorStatus === 'ready' && (
                         <Button
-                          onClick={() => handleStatusUpdate(order.id, 'collected')}
+                          onClick={() => handleOpenOtpDialog(order)}
                           className="gap-2 w-full bg-blue-600 hover:bg-blue-700 text-white shadow-md"
                         >
                           <CheckCircle className="w-4 h-4" />
-                          Mark Collected
+                          Verify & Collect
                         </Button>
                       )}
 
@@ -768,13 +857,13 @@ export default function OrdersManagement() {
                   {selectedOrder.vendorStatus === 'ready' && (
                     <Button
                       onClick={() => {
-                        handleStatusUpdate(selectedOrder.id, 'collected');
                         setSelectedOrder(null);
+                        handleOpenOtpDialog(selectedOrder);
                       }}
                       className="gap-2 col-span-2 bg-blue-600 hover:bg-blue-700"
                     >
                       <CheckCircle className="w-4 h-4" />
-                      Mark as Collected
+                      Verify & Collect
                     </Button>
                   )}
 
@@ -811,6 +900,105 @@ export default function OrdersManagement() {
                     </div>
                   )}
                 </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* OTP Verification Dialog */}
+      {otpOrder && (
+        <Dialog open={isOtpDialogOpen} onOpenChange={setIsOtpDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-center text-xl">Verify Pickup OTP</DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-6 py-4">
+              {/* Order Info */}
+              <div className="text-center space-y-2">
+                <p className="text-sm text-gray-600">Order #{otpOrder.orderNumber}</p>
+                <p className="font-semibold text-lg">{otpOrder.customerName}</p>
+                <p className="text-sm text-gray-500">₹{otpOrder.totalAmount}</p>
+              </div>
+
+              <Separator />
+
+              {/* OTP Input */}
+              <div className="space-y-4">
+                <div className="text-center">
+                  <p className="text-sm font-medium text-gray-700 mb-1">Enter 4-Digit OTP</p>
+                  <p className="text-xs text-gray-500">Ask the customer for their pickup OTP</p>
+                </div>
+
+                <div className="flex justify-center gap-3">
+                  {otpInput.map((digit, index) => (
+                    <Input
+                      key={index}
+                      ref={otpInputRefs[index]}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) => handleOtpInputChange(index, e.target.value)}
+                      onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                      className="w-14 h-14 text-center text-2xl font-bold border-2 focus:border-orange-500 focus:ring-orange-500"
+                      disabled={isVerifying}
+                    />
+                  ))}
+                </div>
+
+                {/* Error Message */}
+                {otpError && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center gap-2 text-red-600 text-sm bg-red-50 p-3 rounded-lg"
+                  >
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    <span>{otpError}</span>
+                  </motion.div>
+                )}
+
+                {/* Info Message */}
+                <div className="flex items-center gap-2 text-blue-600 text-xs bg-blue-50 p-3 rounded-lg">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>The customer should show you a 4-digit OTP from their orders page</span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsOtpDialogOpen(false);
+                    setOtpOrder(null);
+                    setOtpInput(['', '', '', '']);
+                    setOtpError('');
+                  }}
+                  disabled={isVerifying}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleVerifyOtp}
+                  disabled={isVerifying || otpInput.join('').length !== 4}
+                  className="flex-1 bg-orange-600 hover:bg-orange-700 text-white"
+                >
+                  {isVerifying ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      Verifying...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Verify OTP
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
           </DialogContent>

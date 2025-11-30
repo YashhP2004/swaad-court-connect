@@ -62,7 +62,7 @@ export interface Restaurant {
   coverImage: string;
   rating: number;
   totalRatings: number;
-  deliveryTime: string;
+  prepTime: string; // Changed from deliveryTime
   distance: string;
   cuisine: string[];
   tags: string[];
@@ -135,7 +135,6 @@ export interface Order {
   pricing: {
     subtotal: number;
     taxes: number;
-    deliveryFee: number;
     discount: number;
     totalAmount: number;
   };
@@ -156,6 +155,16 @@ export interface Order {
     status: 'Pending' | 'Completed' | 'Refunded' | 'Failed';
     transactionId?: string | null;
     paidAt?: string | Date | Timestamp | null;
+  };
+  pickupOTP?: {
+    plainText?: string | null;
+    hash: string;
+    generatedAt: Timestamp;
+    expiresAt: Timestamp;
+    attempts: number;
+    maxAttempts: number;
+    isUsed: boolean;
+    verifiedAt?: Timestamp;
   };
   tableNumber?: string;
   createdAt: Date | string | Timestamp;

@@ -1,28 +1,30 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Clock, 
-  Receipt, 
+import {
+  Clock,
+  Receipt,
   ChefHat,
   CheckCircle,
   XCircle,
   Utensils,
-  Calendar
+  Calendar,
+  RefreshCw
 } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/context/auth-context';
-import { 
-  getUserOrders, 
-  getOngoingOrders, 
-  getPastOrders, 
+import {
+  getUserOrders,
+  getOngoingOrders,
+  getPastOrders,
   getOrderStatusColor,
   Order,
-  OrderItem 
+  OrderItem
 } from '@/lib/firebase';
 import { formatDistanceToNow } from 'date-fns';
+import { toast } from 'sonner';
 
 const EmptyState = ({ type }: { type: 'ongoing' | 'past' }) => (
   <motion.div
@@ -41,7 +43,7 @@ const EmptyState = ({ type }: { type: 'ongoing' | 'past' }) => (
       {type === 'ongoing' ? 'No ongoing orders' : 'No past orders'}
     </h3>
     <p className="text-muted-foreground text-center max-w-sm">
-      {type === 'ongoing' 
+      {type === 'ongoing'
         ? 'When you place an order, it will appear here with real-time updates.'
         : 'Your completed and cancelled orders will be shown here.'
       }
@@ -92,6 +94,52 @@ const OrderItemsList = ({ items }: { items: OrderItem[] }) => (
 );
 
 const OrderCard = ({ order }: { order: Order }) => {
+  const [otpTimeRemaining, setOtpTimeRemaining] = React.useState<{ minutes: number; seconds: number; isExpired: boolean } | null>(null);
+  const [isRegeneratingOtp, setIsRegeneratingOtp] = React.useState(false);
+
+  // Debug logging
+  React.useEffect(() => {
+    if (order.status === 'Ready to Serve') {
+      console.log('🔍 Order with Ready to Serve status:', {
+        orderId: order.id,
+        status: order.status,
+        pickupOTP: order.pickupOTP,
+        hasPlainText: !!order.pickupOTP?.plainText,
+        isUsed: order.pickupOTP?.isUsed
+      });
+    }
+  }, [order]);
+
+  // Update OTP countdown timer
+  React.useEffect(() => {
+    if (order.status === 'Ready to Serve' && order.pickupOTP?.expiresAt) {
+      const updateTimer = async () => {
+        const { getOTPRemainingTime } = await import('@/lib/firebase/pickupOtp');
+        const remaining = getOTPRemainingTime(order.pickupOTP.expiresAt);
+        setOtpTimeRemaining(remaining);
+      };
+
+      updateTimer();
+      const interval = setInterval(updateTimer, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [order.status, order.pickupOTP]);
+
+  // Handle OTP regeneration
+  const handleRegenerateOtp = async () => {
+    setIsRegeneratingOtp(true);
+    try {
+      const { generateOTPForReadyOrder } = await import('@/lib/firebase/orders');
+      await generateOTPForReadyOrder(order.id);
+      toast.success('New OTP generated successfully!');
+    } catch (error) {
+      console.error('Error regenerating OTP:', error);
+      toast.error('Failed to generate new OTP. Please try again.');
+    } finally {
+      setIsRegeneratingOtp(false);
+    }
+  };
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'Placed':
@@ -113,6 +161,24 @@ const OrderCard = ({ order }: { order: Order }) => {
     }
   };
 
+  const showOTP = order.status === 'Ready to Serve' && order.pickupOTP?.plainText && !order.pickupOTP?.isUsed;
+
+  // Detailed logging
+  if (order.status === 'Ready to Serve') {
+    console.log('🎯 OTP Display Check:', {
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      status: order.status,
+      showOTP: showOTP,
+      pickupOTP_exists: !!order.pickupOTP,
+      plainText_value: order.pickupOTP?.plainText,
+      plainText_exists: !!order.pickupOTP?.plainText,
+      isUsed: order.pickupOTP?.isUsed,
+      hash: order.pickupOTP?.hash ? 'exists' : 'missing',
+      expiresAt: order.pickupOTP?.expiresAt ? 'exists' : 'missing'
+    });
+  }
+
   return (
     <motion.div
       layout
@@ -122,7 +188,7 @@ const OrderCard = ({ order }: { order: Order }) => {
       whileHover={{ y: -2 }}
       transition={{ duration: 0.2 }}
     >
-      <Card className="hover:shadow-lg transition-shadow duration-200">
+      <Card className={`hover:shadow-lg transition-shadow duration-200 ${showOTP ? 'border-2 border-orange-500' : ''}`}>
         <CardHeader className="pb-3">
           <div className="flex justify-between items-start">
             <div className="flex-1">
@@ -134,7 +200,7 @@ const OrderCard = ({ order }: { order: Order }) => {
                 </div>
               </div>
             </div>
-            <Badge 
+            <Badge
               className={`${getOrderStatusColor(order.status)} flex items-center gap-1`}
               variant="secondary"
             >
@@ -143,19 +209,80 @@ const OrderCard = ({ order }: { order: Order }) => {
             </Badge>
           </div>
         </CardHeader>
-        
+
         <CardContent>
+          {/* OTP Display Section */}
+          {showOTP && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="mb-4 p-4 bg-gradient-to-r from-orange-500 to-amber-500 rounded-xl text-white shadow-lg"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                    <Utensils className="w-4 h-4" />
+                  </div>
+                  <span className="font-semibold">Pickup OTP</span>
+                </div>
+                {otpTimeRemaining && !otpTimeRemaining.isExpired && (
+                  <div className="flex items-center gap-1 text-sm bg-white/20 px-2 py-1 rounded-full">
+                    <Clock className="w-3 h-3" />
+                    {String(otpTimeRemaining.minutes).padStart(2, '0')}:{String(otpTimeRemaining.seconds).padStart(2, '0')}
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center justify-center gap-2 my-3">
+                {order.pickupOTP.plainText.split('').map((digit, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="w-12 h-14 bg-white rounded-lg flex items-center justify-center text-3xl font-bold text-orange-600 shadow-md"
+                  >
+                    {digit}
+                  </motion.div>
+                ))}
+              </div>
+              <p className="text-xs text-white/90 text-center mb-2">
+                {otpTimeRemaining?.isExpired
+                  ? '⚠️ OTP has expired. Click below to generate a new one.'
+                  : 'Show this OTP to the vendor when collecting your order'}
+              </p>
+              {otpTimeRemaining?.isExpired && (
+                <button
+                  onClick={handleRegenerateOtp}
+                  disabled={isRegeneratingOtp}
+                  className="w-full mt-2 px-4 py-2 bg-white text-orange-600 rounded-lg font-semibold hover:bg-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isRegeneratingOtp ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4" />
+                      Generate New OTP
+                    </>
+                  )}
+                </button>
+              )}
+            </motion.div>
+          )}
+
           <OrderItemsList items={order.items} />
-          
+
           <Separator className="my-4" />
-          
+
           <div className="flex justify-between items-center">
             <span className="text-sm text-muted-foreground">
               {order.items.length} item{order.items.length !== 1 ? 's' : ''}
             </span>
             <span className="font-semibold text-lg">₹{order.totalAmount}</span>
           </div>
-          
+
           {order.notes && (
             <div className="mt-3 p-3 bg-muted rounded-lg">
               <p className="text-sm text-muted-foreground">

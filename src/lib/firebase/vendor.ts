@@ -120,6 +120,8 @@ export function getVendorOrdersRealtime(vendorId: string, callback: (orders: any
     console.log('🔥 getVendorOrdersRealtime called with vendorId:', vendorId);
 
     const ordersRef = collection(db, 'orders');
+
+    // Query for orders where restaurantId matches OR vendorId is in restaurantIds array
     let q = query(
         ordersRef,
         where('restaurantId', '==', vendorId)
@@ -129,17 +131,25 @@ export function getVendorOrdersRealtime(vendorId: string, callback: (orders: any
         q,
         (snapshot) => {
             console.log('📦 onSnapshot triggered, docs count:', snapshot.docs.length);
-            const orders = snapshot.docs.map(doc => {
-                const data = doc.data() as any;
-                return {
-                    id: doc.id,
-                    ...data,
-                    items: (data.items || []).map((item: any) => ({
-                        ...item,
-                        price: Number(item.price || item.unitPrice || 0)
-                    }))
-                };
-            });
+
+            // Also filter in memory for orders that have this vendorId in restaurantIds array
+            const orders = snapshot.docs
+                .map(doc => {
+                    const data = doc.data() as any;
+                    return {
+                        id: doc.id,
+                        ...data,
+                        items: (data.items || []).map((item: any) => ({
+                            ...item,
+                            price: Number(item.price || item.unitPrice || 0)
+                        }))
+                    };
+                })
+                .filter(order => {
+                    // Include if restaurantId matches OR vendorId is in restaurantIds array
+                    return order.restaurantId === vendorId ||
+                        (order.restaurantIds && Array.isArray(order.restaurantIds) && order.restaurantIds.includes(vendorId));
+                });
 
             // Sort in memory to avoid composite index requirement
             orders.sort((a, b) => {
@@ -149,6 +159,7 @@ export function getVendorOrdersRealtime(vendorId: string, callback: (orders: any
             });
 
             console.log('✅ Calling callback with orders:', orders.length);
+            console.log('📋 Orders details:', orders.map(o => ({ id: o.id, restaurantId: o.restaurantId, restaurantIds: o.restaurantIds, status: o.status })));
             callback(orders);
         },
         (error) => {

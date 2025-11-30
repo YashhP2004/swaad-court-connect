@@ -510,23 +510,55 @@ export default function VendorDashboard() {
         });
 
         const pendingOrders = orders.filter(order =>
-          ['pending', 'accepted', 'preparing'].includes(order.status)
+          ['pending', 'accepted', 'preparing'].includes(order.status?.toLowerCase())
         );
 
         const completedToday = todayOrders.filter(order =>
-          order.status === 'completed'
+          order.status?.toLowerCase() === 'completed'
         );
 
         const todayRevenue = completedToday.reduce((sum, order) =>
           sum + (order.totalAmount || 0), 0
         );
 
+        // Calculate all-time completed orders and revenue
+        const allCompletedOrders = orders.filter(order =>
+          order.status?.toLowerCase() === 'completed'
+        );
+
+        const totalRevenue = allCompletedOrders.reduce((sum, order) =>
+          sum + (order.totalAmount || 0), 0
+        );
+
+        // Calculate average order value
+        const avgOrderValue = allCompletedOrders.length > 0
+          ? totalRevenue / allCompletedOrders.length
+          : 0;
+
+        // Calculate completion rate
+        const completionRate = orders.length > 0
+          ? (allCompletedOrders.length / orders.length) * 100
+          : 0;
+
+        console.log('📊 Stats calculated:', {
+          todayOrders: todayOrders.length,
+          todayRevenue,
+          pendingOrders: pendingOrders.length,
+          completedOrders: allCompletedOrders.length,
+          totalRevenue,
+          avgOrderValue,
+          completionRate
+        });
+
         setDashboardStats(prev => ({
           ...prev,
           todayOrders: todayOrders.length,
           todayRevenue,
           pendingOrders: pendingOrders.length,
-          completedOrders: completedToday.length
+          completedOrders: allCompletedOrders.length,
+          totalRevenue,
+          avgOrderValue,
+          completionRate
         }));
 
         setRecentOrders(orders.slice(0, 5));
