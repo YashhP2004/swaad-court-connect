@@ -11,6 +11,7 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
+import { toast } from 'sonner';
 
 interface UserData {
   uid: string;
@@ -63,8 +64,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('AuthContext: No profile document found for UID:', uid);
         return null;
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('AuthContext: Error fetching user profile:', error);
+      // CRITICAL FIX: Re-throw error if it's a permission/network issue
+      // This prevents the app from assuming "null" means "user doesn't exist" and creating a new one
+      if (error.code === 'permission-denied' || error.code === 'unavailable' || error.message?.includes('network')) {
+        throw error;
+      }
       return null;
     }
   };
@@ -163,35 +169,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (firebaseUser) {
           console.log('AuthContext: Fetching profile for user:', firebaseUser.uid);
 
-          // For all users, get profile from users collection first
-          // This avoids permission errors from trying to read admins collection
-          let userProfile = await getUserProfile(firebaseUser.uid);
+          try {
+            // For all users, get profile from users collection first
+            // This avoids permission errors from trying to read admins collection
+            let userProfile = await getUserProfile(firebaseUser.uid);
 
-          if (!userProfile) {
-            console.log('AuthContext: Auto-creating Firestore profile for auth user:', firebaseUser.uid);
-            userProfile = await createUserProfile(firebaseUser, {
-              role: 'customer',
-              name: firebaseUser.displayName || 'Customer',
-              email: firebaseUser.email || '',
-              addresses: []
-            });
-          }
-
-          // If the user profile says they are an admin, we can trust it
-          if (userProfile.role === 'admin') {
-            try {
-              const adminDoc = await getDoc(doc(db, 'admins', firebaseUser.email || ''));
-              if (adminDoc.exists()) {
-                console.log('AuthContext: Fetched additional admin data');
-                // Merge admin data if needed, or just keep userProfile
-              }
-            } catch (e) {
-              console.log('AuthContext: Could not fetch admin specific data (optional)', e);
+            if (!userProfile) {
+              console.log('AuthContext: Auto-creating Firestore profile for auth user:', firebaseUser.uid);
+              userProfile = await createUserProfile(firebaseUser, {
+                role: 'customer',
+                name: firebaseUser.displayName || 'Customer',
+                email: firebaseUser.email || '',
+                addresses: []
+              });
             }
-          }
 
-          console.log('AuthContext: Setting user profile:', userProfile);
-          setUser(userProfile);
+            // If the user profile says they are an admin, we can trust it
+            if (userProfile.role === 'admin') {
+              try {
+                const adminDoc = await getDoc(doc(db, 'admins', firebaseUser.email || ''));
+                if (adminDoc.exists()) {
+                  console.log('AuthContext: Fetched additional admin data');
+                  // Merge admin data if needed, or just keep userProfile
+                }
+              } catch (e) {
+                console.log('AuthContext: Could not fetch admin specific data (optional)', e);
+              }
+            }
+
+            console.log('AuthContext: Setting user profile:', userProfile);
+            setUser(userProfile);
+          } catch (profileError: any) {
+            console.error('AuthContext: Failed to load profile:', profileError);
+            // If we failed to load the profile (e.g. network error), DO NOT clear the user state if we have one
+            // But if this is a fresh login, we might be in trouble.
+            // For now, let's set a minimal user state so the app doesn't crash, but maybe show an error?
+            // Better to NOT set user than to set a wrong one.
+            if (profileError.code === 'permission-denied') {
+              toast.error('Access denied. Please contact support.');
+            } else if (profileError.code === 'unavailable') {
+              toast.error('Network error. Please check your connection.');
+            }
+            // We do NOT set user here, so isAuthenticated remains false, preventing access to protected routes
+          }
         } else {
           console.log('AuthContext: No firebase user, clearing user state');
           setUser(null);

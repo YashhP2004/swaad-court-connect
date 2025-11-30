@@ -156,12 +156,32 @@ export default function Profile() {
     }
   }, [authLoading, user, navigate]);
 
-  // Redirect vendors to dashboard
+  // Redirect vendors and admins to their respective dashboards
+  // Use user.role from AuthContext for immediate redirect
   useEffect(() => {
-    if (!isLoadingProfile && profile?.role === 'vendor') {
-      navigate('/vendor-dashboard');
+    if (!authLoading && user) {
+      console.log('Profile.tsx: Checking redirect for user role:', user.role);
+      if (user.role === 'vendor') {
+        console.log('Profile.tsx: Redirecting vendor to dashboard');
+        navigate('/vendor-dashboard');
+      } else if (user.role === 'admin') {
+        console.log('Profile.tsx: Redirecting admin to panel');
+        navigate('/admin-panel');
+      }
     }
-  }, [isLoadingProfile, profile, navigate]);
+  }, [authLoading, user, navigate]);
+
+  // Also check profile-based redirect as fallback
+  useEffect(() => {
+    if (!isLoadingProfile && profile && !user?.role) {
+      console.log('Profile.tsx: Fallback redirect check for profile role:', profile.role);
+      if (profile.role === 'vendor') {
+        navigate('/vendor-dashboard');
+      } else if (profile.role === 'admin') {
+        navigate('/admin-panel');
+      }
+    }
+  }, [isLoadingProfile, profile, user, navigate]);
 
   const handleLogout = async () => {
     try {

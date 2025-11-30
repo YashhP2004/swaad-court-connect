@@ -21,6 +21,7 @@ import AdminPanel from "./pages/AdminPanel";
 import VendorDashboard from "./pages/VendorDashboard";
 import NotFound from "./pages/NotFound";
 import SearchPage from "./pages/Search";
+import AdminSetup from "./pages/AdminSetup";
 
 const queryClient = new QueryClient();
 
@@ -44,86 +45,89 @@ const App = () => (
             <Sonner />
             <BrowserRouter>
               <Routes>
-                <Route 
-                  path="/" 
+                <Route
+                  path="/"
                   element={
                     <AppLayout>
                       <Home />
                     </AppLayout>
-                  } 
+                  }
                 />
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Login />} />
-                
+
                 {/* Admin Panel Route */}
                 <Route path="/admin-panel" element={<AdminPanel />} />
-                
+
+                {/* Admin Setup Route - For initial admin user creation */}
+                <Route path="/admin-setup" element={<AdminSetup />} />
+
                 {/* Vendor Dashboard Route */}
                 <Route path="/vendor-dashboard" element={<VendorDashboard />} />
-                
-                <Route 
-                  path="/restaurants" 
+
+                <Route
+                  path="/restaurants"
                   element={
                     <AppLayout>
                       <Restaurants />
                     </AppLayout>
-                  } 
+                  }
                 />
-                <Route 
-                  path="/restaurant/:id" 
+                <Route
+                  path="/restaurant/:id"
                   element={
                     <AppLayout>
                       <Restaurant />
                     </AppLayout>
-                  } 
+                  }
                 />
-                <Route 
-                  path="/cart" 
+                <Route
+                  path="/cart"
                   element={
                     <AppLayout>
                       <Cart />
                     </AppLayout>
-                  } 
+                  }
                 />
-                <Route 
-                  path="/checkout" 
+                <Route
+                  path="/checkout"
                   element={
                     <AppLayout>
                       <Checkout />
                     </AppLayout>
-                  } 
+                  }
                 />
-                <Route 
-                  path="/order-success" 
+                <Route
+                  path="/order-success"
                   element={
                     <AppLayout>
                       <OrderSuccess />
                     </AppLayout>
-                  } 
+                  }
                 />
-                <Route 
-                  path="/orders" 
+                <Route
+                  path="/orders"
                   element={
                     <AppLayout>
                       <Orders />
                     </AppLayout>
-                  } 
+                  }
                 />
-                <Route 
-                  path="/profile" 
+                <Route
+                  path="/profile"
                   element={
                     <AppLayout>
                       <Profile />
                     </AppLayout>
-                  } 
+                  }
                 />
-                <Route 
-                  path="/search" 
+                <Route
+                  path="/search"
                   element={
                     <AppLayout>
                       <SearchPage />
                     </AppLayout>
-                  } 
+                  }
                 />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
