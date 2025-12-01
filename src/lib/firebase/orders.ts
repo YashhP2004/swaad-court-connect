@@ -55,11 +55,11 @@ export async function createOrder(orderData: Partial<Order>): Promise<string> {
             paymentId,
             orderNumber,
             status: 'Placed',
-            vendorStatus: 'pending',
+            vendorStatus: 'queued', // Auto-accept paid orders
             statusHistory: [{
                 status: 'Placed',
                 timestamp: timestamp,
-                note: 'Order received'
+                note: 'Order received and queued for preparation'
             }],
             timing: {
                 orderPlaced: timestamp,
@@ -78,7 +78,6 @@ export async function createOrder(orderData: Partial<Order>): Promise<string> {
             pricing: {
                 subtotal: data.subtotal,
                 taxes: taxes,
-                deliveryFee: 0,
                 discount: 0,
                 totalAmount: totalAmount
             },
@@ -175,7 +174,6 @@ export function getUserOrders(userId: string, callback: (orders: Order[]) => voi
                 pricing: data.pricing || {
                     subtotal: data.pricing?.subtotal || data.totalAmount || 0,
                     taxes: data.pricing?.taxes || 0,
-                    deliveryFee: data.pricing?.deliveryFee || 0,
                     discount: data.pricing?.discount || 0,
                     totalAmount: data.pricing?.totalAmount || data.totalAmount || 0
                 },
@@ -274,8 +272,7 @@ export async function updateOrderStatus(orderId: string, status: VendorOrderStat
     try {
         const orderRef = doc(db, 'orders', orderId);
         const statusMap: Record<VendorOrderStatus, OrderStatus> = {
-            pending: 'Placed',
-            accepted: 'Confirmed',
+            queued: 'Placed',
             preparing: 'Preparing',
             ready: 'Ready to Serve',
             collected: 'Served',

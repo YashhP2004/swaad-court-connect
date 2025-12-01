@@ -1,23 +1,25 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  Plus, 
-  Minus, 
-  Trash2, 
+import {
+  ArrowLeft,
+  Plus,
+  Minus,
+  Trash2,
   ShoppingBag,
   CreditCard,
   MapPin,
   Clock,
   Utensils,
   User,
-  LogIn
+  LogIn,
+  Gift
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { VegNonVegIndicator } from '@/components/common/VegNonVegToggle';
+import { PointsRedemption } from '@/components/loyalty/PointsRedemption';
 import { useCart } from '@/context/cart-context';
 import { useAuth } from '@/context/auth-context';
 import { cn } from '@/lib/utils';
@@ -25,15 +27,24 @@ import { cn } from '@/lib/utils';
 export default function Cart() {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
-  const { 
-    items, 
-    updateQuantity, 
-    removeItem, 
-    clearCart, 
-    getTotalPrice, 
+  const {
+    items,
+    updateQuantity,
+    removeItem,
+    clearCart,
+    getTotalPrice,
     getTotalItems,
     getRestaurantSubtotal
   } = useCart();
+
+  // Loyalty points state
+  const [loyaltyPointsToRedeem, setLoyaltyPointsToRedeem] = useState(0);
+  const [loyaltyDiscount, setLoyaltyDiscount] = useState(0);
+
+  const handlePointsChange = (points: number, discount: number) => {
+    setLoyaltyPointsToRedeem(points);
+    setLoyaltyDiscount(discount);
+  };
 
   // Group items by restaurant
   const itemsByRestaurant = items.reduce((acc, item) => {
@@ -48,14 +59,15 @@ export default function Cart() {
   }, {} as Record<string, { restaurantName: string; items: typeof items }>);
 
   const deliveryFee = 0; // Free delivery within mall
-  const taxes = Math.round(getTotalPrice() * 0.05); // 5% tax
-  const totalAmount = getTotalPrice() + deliveryFee + taxes;
+  const subtotal = getTotalPrice();
+  const taxes = Math.round((subtotal - loyaltyDiscount) * 0.05); // 5% tax on discounted amount
+  const totalAmount = subtotal - loyaltyDiscount + taxes;
 
   const handleProceedToCheckout = () => {
     if (!isAuthenticated) {
       // Redirect to login with return URL
-      navigate('/login', { 
-        state: { 
+      navigate('/login', {
+        state: {
           from: '/checkout',
           message: 'Please log in to complete your order and track your purchases'
         }
@@ -123,11 +135,11 @@ export default function Cart() {
                 </p>
               </div>
             </div>
-            
+
             {items.length > 0 && (
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={clearCart}
                 className="text-destructive hover:text-destructive"
               >
@@ -144,8 +156,8 @@ export default function Cart() {
           {/* Cart Items */}
           <div className="lg:col-span-2 space-y-6">
             {Object.entries(itemsByRestaurant).map(([restaurantId, restaurant], index) => (
-              <Card 
-                key={restaurantId} 
+              <Card
+                key={restaurantId}
                 className="border-0 shadow-warm animate-fade-in"
                 style={{ animationDelay: `${index * 150}ms` }}
               >
@@ -160,21 +172,21 @@ export default function Cart() {
                     </Badge>
                   </div>
                 </CardHeader>
-                
+
                 <CardContent className="space-y-4">
                   {restaurant.items.map((item, itemIndex) => (
                     <div key={`${item.id}-${itemIndex}`}>
                       <div className="flex items-center gap-4">
                         <div className="relative w-16 h-16 rounded-lg overflow-hidden">
                           {item.image && (
-                            <img 
-                              src={item.image} 
+                            <img
+                              src={item.image}
                               alt={item.name}
                               className="w-full h-full object-cover"
                             />
                           )}
                         </div>
-                        
+
                         <div className="flex-1">
                           <div className="flex items-start gap-2 mb-1">
                             <VegNonVegIndicator isVeg={item.isVeg} size="sm" />
@@ -187,7 +199,7 @@ export default function Cart() {
                             </p>
                           )}
                         </div>
-                        
+
                         <div className="flex items-center gap-3">
                           <div className="flex items-center gap-2 bg-muted rounded-lg p-1">
                             <Button
@@ -210,7 +222,7 @@ export default function Cart() {
                               <Plus className="h-4 w-4" />
                             </Button>
                           </div>
-                          
+
                           <Button
                             variant="ghost"
                             size="sm"
@@ -221,7 +233,7 @@ export default function Cart() {
                           </Button>
                         </div>
                       </div>
-                      
+
                       {itemIndex < restaurant.items.length - 1 && (
                         <Separator className="mt-4" />
                       )}
@@ -241,7 +253,7 @@ export default function Cart() {
                   Order Summary
                 </CardTitle>
               </CardHeader>
-              
+
               <CardContent className="space-y-4">
                 {/* Authentication Status */}
                 {!isAuthenticated && (
@@ -253,12 +265,12 @@ export default function Cart() {
                     <p className="text-xs text-amber-700 mb-3">
                       Please log in to complete your order and track your purchases
                     </p>
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
                       variant="outline"
                       className="w-full border-amber-300 text-amber-700 hover:bg-amber-100"
-                      onClick={() => navigate('/login', { 
-                        state: { 
+                      onClick={() => navigate('/login', {
+                        state: {
                           from: '/checkout',
                           message: 'Please log in to complete your order and track your purchases'
                         }
@@ -281,6 +293,15 @@ export default function Cart() {
                       </div>
                     </div>
                   </div>
+                )}
+
+                {/* Loyalty Points Redemption */}
+                {isAuthenticated && user && (
+                  <PointsRedemption
+                    availablePoints={user.loyaltyPoints || 0}
+                    orderSubtotal={subtotal}
+                    onPointsChange={handlePointsChange}
+                  />
                 )}
 
                 {/* Location */}
@@ -312,35 +333,40 @@ export default function Cart() {
                       <span>₹{getRestaurantSubtotal(restaurantId)}</span>
                     </div>
                   ))}
-                  
+
                   <Separator />
-                  
+
                   <div className="flex justify-between text-sm font-medium">
                     <span>Subtotal ({getTotalItems()} items)</span>
-                    <span>₹{getTotalPrice()}</span>
+                    <span>₹{subtotal}</span>
                   </div>
-                  
-                  <div className="flex justify-between text-sm">
-                    <span>Delivery Fee</span>
-                    <span className="text-green-600">FREE</span>
-                  </div>
-                  
+
+                  {loyaltyDiscount > 0 && (
+                    <div className="flex justify-between text-sm text-green-600">
+                      <span className="flex items-center gap-1">
+                        <Gift className="h-3 w-3" />
+                        Loyalty Discount
+                      </span>
+                      <span>-₹{loyaltyDiscount.toFixed(0)}</span>
+                    </div>
+                  )}
+
                   <div className="flex justify-between text-sm">
                     <span>Taxes & Fees</span>
                     <span>₹{taxes}</span>
                   </div>
-                  
+
                   <Separator />
-                  
+
                   <div className="flex justify-between text-lg font-bold">
                     <span>Total</span>
                     <span className="text-primary">₹{totalAmount}</span>
                   </div>
                 </div>
 
-                <Button 
-                  variant="food" 
-                  size="lg" 
+                <Button
+                  variant="food"
+                  size="lg"
                   className={cn(
                     "w-full ripple-effect",
                     !isAuthenticated && "opacity-75"

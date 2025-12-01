@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Search, 
-  Star, 
-  Clock, 
+import {
+  Search,
+  Star,
+  Clock,
   MapPin,
   TrendingUp,
   Utensils,
@@ -61,7 +61,7 @@ export default function Home() {
           specialInstructions
         );
       }
-      
+
       toast({
         title: 'Item added to cart',
         description: `${quantity}x ${selectedMenuItem.name} from ${selectedMenuItem.restaurantName} added to your cart`,
@@ -113,7 +113,7 @@ export default function Home() {
     loadData();
   }, []);
 
-  const filteredRestaurants = isVegOnly 
+  const filteredRestaurants = isVegOnly
     ? restaurants.filter(r => r.isVeg)
     : restaurants;
 
@@ -134,14 +134,14 @@ export default function Home() {
       {/* Hero Section */}
       <section className="relative h-[60vh] md:h-[70vh] overflow-hidden">
         <div className="absolute inset-0">
-          <img 
-            src={heroImage} 
-            alt="Food Court" 
+          <img
+            src={heroImage}
+            alt="Food Court"
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/20 to-transparent" />
         </div>
-        
+
         <div className="relative z-10 container mx-auto px-4 h-full flex flex-col justify-center">
           <div className="max-w-2xl animate-fade-in">
             <h1 className="text-4xl md:text-6xl font-heading font-bold text-white mb-4 text-glow animate-fade-in animation-delay-200">
@@ -151,15 +151,15 @@ export default function Home() {
               </span>
             </h1>
             <p className="text-lg md:text-xl text-white/90 mb-8 font-medium animate-fade-in animation-delay-600">
-              Order from multiple restaurants in one place. 
+              Order from multiple restaurants in one place.
               <br className="hidden md:block" />
               Unified cart, single payment, endless flavor!
             </p>
-            
+
             <div className="flex flex-col sm:flex-row gap-4 animate-fade-in animation-delay-800">
-              <Button 
-                variant="food" 
-                size="lg" 
+              <Button
+                variant="food"
+                size="lg"
                 className="group"
                 asChild
               >
@@ -168,10 +168,10 @@ export default function Home() {
                   Explore Food Court
                 </Link>
               </Button>
-              
-              <Button 
-                variant="outline" 
-                size="lg" 
+
+              <Button
+                variant="outline"
+                size="lg"
                 className="bg-white/10 border-white/30 text-white hover:bg-white/20"
                 asChild
               >
@@ -194,12 +194,12 @@ export default function Home() {
       <section className="py-6 border-b bg-background/80 backdrop-blur-sm sticky top-16 z-40">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between">
-            <VegNonVegToggle 
-              isVeg={isVegOnly} 
+            <VegNonVegToggle
+              isVeg={isVegOnly}
               onToggle={setIsVegOnly}
               className=""
             />
-            
+
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <MapPin className="h-4 w-4" />
               <span>Mall Food Court</span>
@@ -217,7 +217,7 @@ export default function Home() {
               <h2 className="text-2xl font-heading font-bold">Food Categories</h2>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {['Burgers', 'Pizza', 'Indian', 'Chinese', 'Desserts', 'Beverages'].map((category, index) => (
               <Button
@@ -249,15 +249,15 @@ export default function Home() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredTrendingItems.map((item, index) => (
-              <Card 
-                key={item.id} 
+              <Card
+                key={item.id}
                 className="group dish-hover cursor-pointer border-0 shadow-food"
                 style={{ animationDelay: `${index * 100}ms` }}
               >
                 <CardContent className="p-0">
                   <div className="relative overflow-hidden rounded-t-lg">
-                    <img 
-                      src={item.image} 
+                    <img
+                      src={item.image}
                       alt={item.name}
                       className="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-110"
                     />
@@ -277,7 +277,7 @@ export default function Home() {
                       </Badge>
                     </div>
                   </div>
-                  
+
                   <div className="p-4">
                     <h3 className="font-semibold text-lg mb-1">{item.name}</h3>
                     <p className="text-sm text-muted-foreground mb-2">{item.description}</p>
@@ -286,84 +286,84 @@ export default function Home() {
                         <span className="text-lg font-bold text-primary">₹{item.price}</span>
                         <p className="text-xs text-muted-foreground">{item.restaurantName}</p>
                       </div>
-                      <Button 
-                        variant="food" 
-                        size="sm" 
+                      <Button
+                        variant="food"
+                        size="sm"
                         className="ripple-effect"
                         onClick={() => handleAddToCart(item)}
                       >
                         Add to Cart
                       </Button>
 
-      {/* Add to Cart Dialog */}
-      <Dialog open={isAddToCartOpen} onOpenChange={setIsAddToCartOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add to Cart</DialogTitle>
-          </DialogHeader>
+                      {/* Add to Cart Dialog */}
+                      <Dialog open={isAddToCartOpen} onOpenChange={setIsAddToCartOpen}>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Add to Cart</DialogTitle>
+                          </DialogHeader>
 
-          {selectedMenuItem && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="relative w-20 h-20 rounded-lg overflow-hidden">
-                  {selectedMenuItem.image && (
-                    <img 
-                      src={selectedMenuItem.image} 
-                      alt={selectedMenuItem.name}
-                      className="w-full h-full object-cover"
-                    />
-                  )}
-                </div>
-                
-                <div>
-                  <h3 className="font-medium">{selectedMenuItem.name}</h3>
-                  <p className="text-sm font-bold text-primary">₹{selectedMenuItem.price}</p>
-                </div>
-              </div>
+                          {selectedMenuItem && (
+                            <div className="space-y-4">
+                              <div className="flex items-center gap-4">
+                                <div className="relative w-20 h-20 rounded-lg overflow-hidden">
+                                  {selectedMenuItem.image && (
+                                    <img
+                                      src={selectedMenuItem.image}
+                                      alt={selectedMenuItem.name}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  )}
+                                </div>
 
-              {/* Special Instructions */}
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium">Special Instructions</h4>
-                <Textarea
-                  placeholder="Any allergies or special requests?"
-                  value={specialInstructions}
-                  onChange={(e) => setSpecialInstructions(e.target.value)}
-                  className="h-24"
-                />
-              </div>
+                                <div>
+                                  <h3 className="font-medium">{selectedMenuItem.name}</h3>
+                                  <p className="text-sm font-bold text-primary">₹{selectedMenuItem.price}</p>
+                                </div>
+                              </div>
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 bg-muted rounded-lg p-1">
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  >
-                    <Minus className="h-4 w-4" />
-                  </Button>
-                  <span className="w-8 text-center">{quantity}</span>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={() => setQuantity(quantity + 1)}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                <p className="font-medium">Total: ₹{selectedMenuItem.price * quantity}</p>
-              </div>
+                              {/* Special Instructions */}
+                              <div className="space-y-2">
+                                <h4 className="text-sm font-medium">Special Instructions</h4>
+                                <Textarea
+                                  placeholder="Any allergies or special requests?"
+                                  value={specialInstructions}
+                                  onChange={(e) => setSpecialInstructions(e.target.value)}
+                                  className="h-24"
+                                />
+                              </div>
 
-              <Button 
-                variant="food" 
-                className="w-full" 
-                onClick={handleConfirmAddToCart}
-              >
-                Add to Cart • ₹{selectedMenuItem.price * quantity}
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 bg-muted rounded-lg p-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                                  >
+                                    <Minus className="h-4 w-4" />
+                                  </Button>
+                                  <span className="w-8 text-center">{quantity}</span>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    onClick={() => setQuantity(quantity + 1)}
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                                <p className="font-medium">Total: ₹{selectedMenuItem.price * quantity}</p>
+                              </div>
+
+                              <Button
+                                variant="food"
+                                className="w-full"
+                                onClick={handleConfirmAddToCart}
+                              >
+                                Add to Cart • ₹{selectedMenuItem.price * quantity}
+                              </Button>
+                            </div>
+                          )}
+                        </DialogContent>
+                      </Dialog>
                     </div>
                   </div>
                 </CardContent>
@@ -386,15 +386,15 @@ export default function Home() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {filteredRestaurants.map((restaurant, index) => (
-              <Card 
-                key={restaurant.id} 
+              <Card
+                key={restaurant.id}
                 className="group dish-hover cursor-pointer border-0 shadow-warm"
                 style={{ animationDelay: `${index * 150}ms` }}
               >
                 <CardContent className="p-0">
                   <div className="relative overflow-hidden rounded-t-lg">
-                    <img 
-                      src={restaurant.image} 
+                    <img
+                      src={restaurant.image}
                       alt={restaurant.name}
                       className="w-full h-40 object-cover transition-transform duration-500 group-hover:scale-110"
                     />
@@ -414,7 +414,7 @@ export default function Home() {
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="p-4">
                     <h3 className="font-semibold text-lg mb-2">{restaurant.name}</h3>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
@@ -424,7 +424,7 @@ export default function Home() {
                       </div>
                       <div className="flex items-center gap-1">
                         <Clock className="h-4 w-4" />
-                        <span>{restaurant.deliveryTime}</span>
+                        <span>{restaurant.prepTime}</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <MapPin className="h-4 w-4" />
@@ -444,9 +444,9 @@ export default function Home() {
                         </Badge>
                       )}
                     </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="w-full ripple-effect"
                       asChild
                     >

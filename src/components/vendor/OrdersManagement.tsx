@@ -121,8 +121,8 @@ export default function OrdersManagement() {
           console.log('📦 OrdersManagement: Received orders:', ordersData.length);
           const formattedOrders = ordersData.map(order => ({
             ...order,
-            status: (order.vendorStatus as VendorOrderStatus) || 'pending',
-            vendorStatus: (order.vendorStatus as VendorOrderStatus) || 'pending',
+            status: (order.vendorStatus as VendorOrderStatus) || 'queued',
+            vendorStatus: (order.vendorStatus as VendorOrderStatus) || 'queued',
             customerName: order.userDetails?.name || 'Unknown Customer',
             customerPhone: order.userDetails?.phone || '',
             customerEmail: order.userDetails?.email || '',
@@ -259,10 +259,8 @@ export default function OrdersManagement() {
 
   const getStatusIcon = (status: VendorOrderStatus) => {
     switch (status) {
-      case 'pending':
-        return <Clock className="w-4 h-4 text-yellow-500" />;
-      case 'accepted':
-        return <CheckCircle className="w-4 h-4 text-blue-500" />;
+      case 'queued':
+        return <Clock className="w-4 h-4 text-blue-500" />;
       case 'preparing':
         return <ChefHat className="w-4 h-4 text-orange-500" />;
       case 'ready':
@@ -278,8 +276,7 @@ export default function OrdersManagement() {
 
   const getStatusBadge = (status: VendorOrderStatus) => {
     const variants = {
-      pending: 'secondary',
-      accepted: 'default',
+      queued: 'secondary',
       preparing: 'secondary',
       ready: 'default',
       collected: 'default',
@@ -295,8 +292,7 @@ export default function OrdersManagement() {
   };
 
   const statusFlow: Record<VendorOrderStatus, VendorOrderStatus | null> = {
-    pending: 'accepted',
-    accepted: 'preparing',
+    queued: 'preparing',
     preparing: 'ready',
     ready: 'collected',
     collected: 'completed',
@@ -315,8 +311,7 @@ export default function OrdersManagement() {
   const getOrderStats = () => {
     return {
       total: orders.length,
-      pending: orders.filter(o => o.vendorStatus === 'pending').length,
-      accepted: orders.filter(o => o.vendorStatus === 'accepted').length,
+      queued: orders.filter(o => o.vendorStatus === 'queued').length,
       preparing: orders.filter(o => o.vendorStatus === 'preparing').length,
       ready: orders.filter(o => o.vendorStatus === 'ready').length,
       collected: orders.filter(o => o.vendorStatus === 'collected').length,
@@ -373,8 +368,8 @@ export default function OrdersManagement() {
         >
           <Card className="border-0 shadow-lg">
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
-              <div className="text-sm text-gray-600">Pending</div>
+              <div className="text-2xl font-bold text-blue-600">{stats.queued}</div>
+              <div className="text-sm text-gray-600">Queued</div>
             </CardContent>
           </Card>
         </motion.div>
@@ -439,8 +434,7 @@ export default function OrdersManagement() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Orders</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="accepted">Accepted</SelectItem>
+            <SelectItem value="queued">Queued</SelectItem>
             <SelectItem value="preparing">Preparing</SelectItem>
             <SelectItem value="ready">Ready</SelectItem>
             <SelectItem value="collected">Collected</SelectItem>
@@ -558,8 +552,7 @@ export default function OrdersManagement() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="pending">Pending</SelectItem>
-                              <SelectItem value="accepted">Accepted</SelectItem>
+                              <SelectItem value="queued">Queued</SelectItem>
                               <SelectItem value="preparing">Preparing</SelectItem>
                               <SelectItem value="ready">Ready</SelectItem>
                               <SelectItem value="collected">Collected</SelectItem>
@@ -571,32 +564,12 @@ export default function OrdersManagement() {
                       )}
 
                       {/* Status Update Buttons */}
-                      {order.vendorStatus === 'pending' && (
-                        <>
-                          <Button
-                            onClick={() => handleStatusUpdate(order.id, 'accepted')}
-                            className="gap-2 w-full bg-green-600 hover:bg-green-700 text-white shadow-md"
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                            Accept Order
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            onClick={() => handleStatusUpdate(order.id, 'cancelled')}
-                            className="gap-2 w-full shadow-md"
-                          >
-                            <XCircle className="w-4 h-4" />
-                            Reject
-                          </Button>
-                        </>
-                      )}
-
-                      {order.vendorStatus === 'accepted' && (
+                      {order.vendorStatus === 'queued' && (
                         <Button
                           onClick={() => handleStatusUpdate(order.id, 'preparing')}
                           className="gap-2 w-full bg-orange-600 hover:bg-orange-700 text-white shadow-md"
                         >
-                          <ChefHat className="w-4 h-4" />
+                          <ChefHat className="w-4 w-4" />
                           Start Preparing
                         </Button>
                       )}
@@ -789,8 +762,7 @@ export default function OrdersManagement() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="accepted">Accepted</SelectItem>
+                        <SelectItem value="queued">Queued</SelectItem>
                         <SelectItem value="preparing">Preparing</SelectItem>
                         <SelectItem value="ready">Ready</SelectItem>
                         <SelectItem value="collected">Collected</SelectItem>
@@ -802,39 +774,13 @@ export default function OrdersManagement() {
                 )}
 
                 <div className="grid grid-cols-2 gap-3">
-                  {selectedOrder.vendorStatus === 'pending' && (
-                    <>
-                      <Button
-                        onClick={() => {
-                          handleStatusUpdate(selectedOrder.id, 'accepted');
-                          setSelectedOrder(null);
-                        }}
-                        className="gap-2 bg-green-600 hover:bg-green-700"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                        Accept Order
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        onClick={() => {
-                          handleStatusUpdate(selectedOrder.id, 'cancelled');
-                          setSelectedOrder(null);
-                        }}
-                        className="gap-2"
-                      >
-                        <XCircle className="w-4 h-4" />
-                        Reject Order
-                      </Button>
-                    </>
-                  )}
-
-                  {selectedOrder.vendorStatus === 'accepted' && (
+                  {selectedOrder.vendorStatus === 'queued' && (
                     <Button
                       onClick={() => {
                         handleStatusUpdate(selectedOrder.id, 'preparing');
                         setSelectedOrder(null);
                       }}
-                      className="gap-2 col-span-2"
+                      className="gap-2 col-span-2 bg-orange-600 hover:bg-orange-700"
                     >
                       <ChefHat className="w-4 h-4" />
                       Start Preparing

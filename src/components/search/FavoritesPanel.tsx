@@ -55,7 +55,7 @@ export const FavoritesPanel = () => {
                         {restaurant.rating.toFixed(1)}
                       </span>
                       <span>•</span>
-                      <span>{restaurant.deliveryTime} min</span>
+                      <span>{restaurant.prepTime} min</span>
                     </div>
                   </div>
                 </div>

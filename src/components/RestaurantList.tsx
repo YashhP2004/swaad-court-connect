@@ -25,7 +25,7 @@ export function RestaurantList() {
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Fetch restaurants
-  const { data: restaurants, isLoading: isLoadingRestaurants, error: restaurantsError } = 
+  const { data: restaurants, isLoading: isLoadingRestaurants, error: restaurantsError } =
     useQuery({
       queryKey: ['restaurants'],
       queryFn: fetchRestaurants,
@@ -34,7 +34,7 @@ export function RestaurantList() {
     });
 
   // Fetch menu items for selected restaurant
-  const { data: menuItems, isLoading: isLoadingMenu } = 
+  const { data: menuItems, isLoading: isLoadingMenu } =
     useQuery({
       queryKey: ['menu', selectedRestaurant],
       queryFn: () => selectedRestaurant ? fetchRestaurantMenu(selectedRestaurant) : Promise.resolve([]),
@@ -70,10 +70,10 @@ export function RestaurantList() {
     try {
       for (let i = 0; i < quantity; i++) {
         const restaurant = restaurants?.find(r => r.id === selectedRestaurant);
-      if (!restaurant) return;
-      addItem(selectedMenuItem, selectedRestaurant, restaurant.name, [], specialInstructions);
+        if (!restaurant) return;
+        addItem(selectedMenuItem, selectedRestaurant, restaurant.name, [], specialInstructions);
       }
-      
+
       toast({
         title: 'Item added to cart',
         description: `${quantity}x ${selectedMenuItem.name} added to your cart`,
@@ -91,7 +91,7 @@ export function RestaurantList() {
       });
     }
   };
-  
+
   // Reset scroll position when menu items load
   useEffect(() => {
     if (menuRef.current) {
@@ -125,12 +125,12 @@ export function RestaurantList() {
             if (!open) setSelectedRestaurant(null);
           }}>
             <SheetTrigger asChild>
-              <motion.div 
+              <motion.div
                 whileHover={{ y: -8, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)' }}
                 whileTap={{ scale: 0.98 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 17 }}
               >
-                <Card 
+                <Card
                   className="cursor-pointer overflow-hidden group rounded-xl"
                   onClick={() => handleRestaurantClick(restaurant.id)}
                 >
@@ -146,8 +146,8 @@ export function RestaurantList() {
                       </Badge>
                     )}
                     <div className="relative overflow-hidden">
-                      <img 
-                        src={restaurant.image} 
+                      <img
+                        src={restaurant.image}
                         alt={restaurant.name}
                         className="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-110"
                       />
@@ -158,9 +158,9 @@ export function RestaurantList() {
                             <span className="text-yellow-400">★</span>
                             <span>{restaurant.rating}</span>
                             <span>•</span>
-                            <span>{restaurant.deliveryTime}</span>
+                            <span>{restaurant.prepTime}</span>
                           </div>
-                         
+
                         </div>
                         <div className="flex gap-2 mt-2 flex-wrap">
                           {restaurant.tags?.slice(0, 3).map((tag, index) => (
@@ -179,8 +179,8 @@ export function RestaurantList() {
             <SheetContent side="right" className="w-full sm:max-w-md md:max-w-xl overflow-y-auto">
               <SheetHeader className="text-left">
                 <div className="relative h-40 w-full overflow-hidden rounded-lg mb-4">
-                  <img 
-                    src={restaurant.coverImage || restaurant.image} 
+                  <img
+                    src={restaurant.coverImage || restaurant.image}
                     alt={restaurant.name}
                     className="w-full h-full object-cover"
                   />
@@ -194,14 +194,14 @@ export function RestaurantList() {
                       </div>
                       <div className="flex items-center gap-1">
                         <Clock className="h-4 w-4" />
-                        <span>{restaurant.deliveryTime}</span>
+                        <span>{restaurant.prepTime}</span>
                       </div>
-                    
+
                     </div>
                   </div>
                 </div>
               </SheetHeader>
-              
+
               <div className="mt-2 mb-6">
                 <p className="text-muted-foreground text-sm">{restaurant.description}</p>
                 <div className="flex flex-wrap gap-2 mt-3">
@@ -214,9 +214,9 @@ export function RestaurantList() {
                   )}
                 </div>
               </div>
-              
+
               <Separator className="my-4" />
-              
+
               {isLoadingMenu ? (
                 <div className="flex items-center justify-center min-h-[200px]">
                   <div className="text-lg">Loading menu...</div>
@@ -224,23 +224,23 @@ export function RestaurantList() {
               ) : (
                 <div ref={menuRef} className="space-y-6 pb-20">
                   <h3 className="text-xl font-semibold sticky top-0 bg-background/95 backdrop-blur-sm py-2 z-10">Menu</h3>
-                  
+
                   {/* Group menu items by category */}
                   {Array.from(new Set(menuItems?.map(item => item.category))).map(category => (
                     <div key={category} className="space-y-4">
                       <h4 className="font-medium text-lg">{category}</h4>
                       <div className="space-y-4">
                         {menuItems?.filter(item => item.category === category).map((item, index) => (
-                          <motion.div 
-                            key={item.id} 
+                          <motion.div
+                            key={item.id}
                             className="flex gap-3 p-3 border rounded-lg hover:shadow-md transition-all group"
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: index * 0.05, duration: 0.3 }}
                           >
                             <div className="relative min-w-[80px] h-[80px] rounded-md overflow-hidden">
-                              <img 
-                                src={item.image} 
+                              <img
+                                src={item.image}
                                 alt={item.name}
                                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                               />
@@ -260,8 +260,8 @@ export function RestaurantList() {
                                     )}
                                   </div>
                                 </div>
-                                <Button 
-                                  size="sm" 
+                                <Button
+                                  size="sm"
                                   className="rounded-full h-8 w-8 p-0 bg-primary hover:bg-primary/90 text-primary-foreground"
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -271,84 +271,84 @@ export function RestaurantList() {
                                   <Plus className="h-4 w-4" />
                                 </Button>
 
-      {/* Add to Cart Dialog */}
-      <Dialog open={isAddToCartOpen} onOpenChange={setIsAddToCartOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add to Cart</DialogTitle>
-          </DialogHeader>
-          
-          {selectedMenuItem && (
-            <div className="space-y-4">
-              <div className="flex gap-4 items-start">
-                <div className="relative w-24 h-24 rounded-lg overflow-hidden">
-                  <img 
-                    src={selectedMenuItem.image} 
-                    alt={selectedMenuItem.name}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute top-1 left-1">
-                    <VegNonVegIndicator isVeg={selectedMenuItem.isVeg} size="sm" />
-                  </div>
-                </div>
-                
-                <div className="flex-1">
-                  <h3 className="font-medium">{selectedMenuItem.name}</h3>
-                  <p className="text-sm text-muted-foreground line-clamp-2">{selectedMenuItem.description}</p>
-                  <p className="font-medium mt-1">₹{selectedMenuItem.price}</p>
-                </div>
-              </div>
+                                {/* Add to Cart Dialog */}
+                                <Dialog open={isAddToCartOpen} onOpenChange={setIsAddToCartOpen}>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>Add to Cart</DialogTitle>
+                                    </DialogHeader>
 
-              {/* Special Instructions */}
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium">Special Instructions</h4>
-                <Textarea
-                  placeholder="Any allergies or special requests?"
-                  value={specialInstructions}
-                  onChange={(e) => setSpecialInstructions(e.target.value)}
-                  className="h-24"
-                />
-                {selectedMenuItem?.allergens && (
-                  <div className="text-sm text-muted-foreground">
-                    <span className="font-medium">Contains:</span> {selectedMenuItem.allergens.join(', ')}
-                  </div>
-                )}
-              </div>
+                                    {selectedMenuItem && (
+                                      <div className="space-y-4">
+                                        <div className="flex gap-4 items-start">
+                                          <div className="relative w-24 h-24 rounded-lg overflow-hidden">
+                                            <img
+                                              src={selectedMenuItem.image}
+                                              alt={selectedMenuItem.name}
+                                              className="w-full h-full object-cover"
+                                            />
+                                            <div className="absolute top-1 left-1">
+                                              <VegNonVegIndicator isVeg={selectedMenuItem.isVeg} size="sm" />
+                                            </div>
+                                          </div>
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 bg-muted rounded-lg p-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 w-8 p-0"
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    disabled={quantity <= 1}
-                  >
-                    <Minus className="h-4 w-4" />
-                  </Button>
-                  <span className="text-sm font-medium w-6 text-center">{quantity}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 w-8 p-0"
-                    onClick={() => setQuantity(quantity + 1)}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
+                                          <div className="flex-1">
+                                            <h3 className="font-medium">{selectedMenuItem.name}</h3>
+                                            <p className="text-sm text-muted-foreground line-clamp-2">{selectedMenuItem.description}</p>
+                                            <p className="font-medium mt-1">₹{selectedMenuItem.price}</p>
+                                          </div>
+                                        </div>
 
-                <Button
-                  className="flex-1 ripple-effect"
-                  onClick={handleConfirmAddToCart}
-                >
-                  <Utensils className="h-4 w-4 mr-2" />
-                  Add to Cart • ₹{selectedMenuItem.price * quantity}
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+                                        {/* Special Instructions */}
+                                        <div className="space-y-2">
+                                          <h4 className="text-sm font-medium">Special Instructions</h4>
+                                          <Textarea
+                                            placeholder="Any allergies or special requests?"
+                                            value={specialInstructions}
+                                            onChange={(e) => setSpecialInstructions(e.target.value)}
+                                            className="h-24"
+                                          />
+                                          {selectedMenuItem?.allergens && (
+                                            <div className="text-sm text-muted-foreground">
+                                              <span className="font-medium">Contains:</span> {selectedMenuItem.allergens.join(', ')}
+                                            </div>
+                                          )}
+                                        </div>
+
+                                        <div className="flex items-center justify-between">
+                                          <div className="flex items-center gap-2 bg-muted rounded-lg p-1">
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              className="h-8 w-8 p-0"
+                                              onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                                              disabled={quantity <= 1}
+                                            >
+                                              <Minus className="h-4 w-4" />
+                                            </Button>
+                                            <span className="text-sm font-medium w-6 text-center">{quantity}</span>
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              className="h-8 w-8 p-0"
+                                              onClick={() => setQuantity(quantity + 1)}
+                                            >
+                                              <Plus className="h-4 w-4" />
+                                            </Button>
+                                          </div>
+
+                                          <Button
+                                            className="flex-1 ripple-effect"
+                                            onClick={handleConfirmAddToCart}
+                                          >
+                                            <Utensils className="h-4 w-4 mr-2" />
+                                            Add to Cart • ₹{selectedMenuItem.price * quantity}
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </DialogContent>
+                                </Dialog>
                               </div>
                             </div>
                           </motion.div>

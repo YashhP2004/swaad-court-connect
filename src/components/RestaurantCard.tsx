@@ -48,7 +48,7 @@ export const RestaurantCard = ({ restaurant }: RestaurantCardProps) => {
             />
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
               <h3 className="text-white font-semibold text-lg mb-1">{restaurant.name}</h3>
-              
+
               {/* Info Row */}
               <div className="flex items-center gap-2 text-white text-sm">
                 <div className="flex items-center gap-1">
@@ -58,7 +58,7 @@ export const RestaurantCard = ({ restaurant }: RestaurantCardProps) => {
                 <span>•</span>
                 <div className="flex items-center gap-1">
                   <Clock className="h-4 w-4" />
-                  <span>{restaurant.deliveryTime || '30-40'} min</span>
+                  <span>{restaurant.prepTime || '30-40'} min</span>
                 </div>
               </div>
 

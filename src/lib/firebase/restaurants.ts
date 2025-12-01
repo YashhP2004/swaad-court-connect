@@ -236,7 +236,7 @@ export async function getAllRestaurantsForAdmin(status?: string) {
                 logo: data.image || data.logo || '',
                 status: data.status || 'active',
                 rating: data.rating || 0,
-                deliveryTime: data.deliveryTime || '30-45 mins',
+                prepTime: data.prepTime || '30-45 mins',
                 distance: data.distance || 'N/A',
                 isOpen: data.isOpen !== undefined ? data.isOpen : true,
                 menuItemsCount: data.menuItemsCount || 0,

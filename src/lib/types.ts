@@ -101,7 +101,7 @@ export interface PhoneAuthResult {
 
 // Order Status Types
 export type OrderStatus = 'Placed' | 'Confirmed' | 'Preparing' | 'Ready to Serve' | 'Served' | 'Completed' | 'Cancelled';
-export type VendorOrderStatus = 'pending' | 'accepted' | 'preparing' | 'ready' | 'collected' | 'completed' | 'cancelled';
+export type VendorOrderStatus = 'queued' | 'preparing' | 'ready' | 'collected' | 'completed' | 'cancelled';
 
 export interface OrderItem {
   id: string;
@@ -136,6 +136,8 @@ export interface Order {
     subtotal: number;
     taxes: number;
     discount: number;
+    loyaltyPointsUsed?: number; // Points redeemed for this order
+    loyaltyDiscount?: number; // Discount amount from points
     totalAmount: number;
   };
   totalAmount: number;
