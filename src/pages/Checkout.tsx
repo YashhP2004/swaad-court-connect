@@ -21,8 +21,8 @@ export default function Checkout() {
   const { user, isAuthenticated, isLoading } = useAuth();
 
   const totalAmount = getTotalPrice();
-  const taxes = (totalAmount * 0.05).toFixed(2); // 5% tax
-  const finalAmount = (parseFloat(totalAmount.toString()) + parseFloat(taxes)).toFixed(2);
+  const taxes = (totalAmount * 0.05).toFixed(0); // 5% tax
+  const finalAmount = (parseFloat(totalAmount.toString()) + parseFloat(taxes)).toFixed(0);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -223,7 +223,7 @@ export default function Checkout() {
                         Quantity: {item.quantity}
                       </p>
                     </div>
-                    <p className="font-medium">₹{item.totalPrice.toFixed(2)}</p>
+                    <p className="font-medium">₹{item.totalPrice.toFixed(0)}</p>
                   </div>
                 ))}
 
@@ -232,7 +232,7 @@ export default function Checkout() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Subtotal</span>
-                    <span>₹{totalAmount.toFixed(2)}</span>
+                    <span>₹{totalAmount.toFixed(0)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Taxes & Fees (5%)</span>

@@ -360,12 +360,12 @@ export default function BillingTransactions() {
     try {
       const headers = ['Metric', 'Value'];
       const rows = [
-        ['Total Earnings', paymentSummary.lifetimeEarnings.toFixed(2)],
-        ['Pending Payouts', paymentSummary.pendingPayouts.toFixed(2)],
-        ['Completed Payouts', paymentSummary.completedPayouts.toFixed(2)],
-        ['Filtered Earnings', paymentSummary.filteredEarnings.toFixed(2)],
+        ['Total Earnings', paymentSummary.lifetimeEarnings.toFixed(0)],
+        ['Pending Payouts', paymentSummary.pendingPayouts.toFixed(0)],
+        ['Completed Payouts', paymentSummary.completedPayouts.toFixed(0)],
+        ['Filtered Earnings', paymentSummary.filteredEarnings.toFixed(0)],
         ['Last Payout Date', paymentSummary.lastPayoutDate ? paymentSummary.lastPayoutDate.toLocaleDateString() : 'N/A'],
-        ['Last Payout Amount', paymentSummary.lastPayoutAmount ? paymentSummary.lastPayoutAmount.toFixed(2) : '0.00']
+        ['Last Payout Amount', paymentSummary.lastPayoutAmount ? paymentSummary.lastPayoutAmount.toFixed(0) : '0']
       ];
 
       const csvContent = [
@@ -653,8 +653,8 @@ export default function BillingTransactions() {
                       <TableCell>{transaction.customerName}</TableCell>
                       <TableCell>
                         <div>
-                          <p className="font-semibold">₹{transaction.amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                          <p className="text-sm text-gray-500">-₹{transaction.commission.toFixed(2)} fee</p>
+                          <p className="font-semibold">₹{transaction.amount.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
+                          <p className="text-sm text-gray-500">-₹{transaction.commission.toFixed(0)} fee</p>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -845,7 +845,7 @@ export default function BillingTransactions() {
                   </div>
                   <div>
                     <Label>Commission</Label>
-                    <p className="font-semibold text-red-600">₹{selectedTransaction.commission.toFixed(2)}</p>
+                    <p className="font-semibold text-red-600">₹{selectedTransaction.commission.toFixed(0)}</p>
                   </div>
                   <div>
                     <Label>Your Earnings</Label>

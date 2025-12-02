@@ -40,13 +40,13 @@ service cloud.firestore {
     match /restaurants/{restaurantId} {
       allow read: if true;
       allow write: if request.auth != null && 
-        (resource.data.ownerId == request.auth.uid || isAdmin());
+        (resource.data.vendorId == request.auth.uid || isAdmin());
       
       // Restaurant menu subcollection
       match /menu/{menuItemId} {
         allow read: if true;
         allow write: if request.auth != null && 
-          (get(/databases/$(database)/documents/restaurants/$(restaurantId)).data.ownerId == request.auth.uid ||
+          (get(/databases/$(database)/documents/restaurants/$(restaurantId)).data.vendorId == request.auth.uid ||
            isAdmin());
       }
     }

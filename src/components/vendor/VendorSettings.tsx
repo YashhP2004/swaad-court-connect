@@ -19,7 +19,8 @@ import {
   Store,
   Users,
   Palette,
-  Upload
+  Upload,
+  ChefHat
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -80,6 +81,7 @@ interface RestaurantProfile {
     accountHolderName: string;
     bankName: string;
   };
+  maxCapacity?: number; // Kitchen capacity for demand indicators
 }
 
 interface NotificationSettings {
@@ -215,7 +217,8 @@ export default function VendorSettings() {
             ifscCode: 'HDFC0001234',
             accountHolderName: profileData.businessName || profileData.name,
             bankName: 'HDFC Bank'
-          }
+          },
+          maxCapacity: profileData.maxCapacity || 15
         });
       }
 
@@ -698,6 +701,71 @@ export default function VendorSettings() {
                   disabled={!isEditing}
                 />
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="business" className="space-y-6">
+          {/* Kitchen Capacity Settings */}
+          <Card className="border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ChefHat className="w-5 h-5" />
+                Kitchen Capacity Settings
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="maxCapacity">Maximum Concurrent Orders</Label>
+                <Input
+                  id="maxCapacity"
+                  type="number"
+                  min="5"
+                  max="50"
+                  value={restaurantProfile.maxCapacity || 15}
+                  onChange={(e) => setRestaurantProfile(prev => ({ ...prev, maxCapacity: Number(e.target.value) }))}
+                  disabled={!isEditing}
+                  placeholder="15"
+                />
+                <p className="text-sm text-gray-600 mt-2">
+                  Set the maximum number of orders your kitchen can handle simultaneously.
+                  This helps calculate demand levels and wait times for customers.
+                </p>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-semibold text-blue-900 mb-2">💡 How This Works</h4>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>• Helps customers see accurate wait times</li>
+                  <li>• Shows demand indicators (🟢🟡🟠🔴) on your restaurant card</li>
+                  <li>• Alerts you when kitchen capacity reaches 80%+</li>
+                  <li>• Recommended: 10-20 for small kitchens, 20-30 for medium, 30+ for large</li>
+                </ul>
+              </div>
+
+              {restaurantProfile.maxCapacity && (
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-semibold mb-2">Current Capacity: {restaurantProfile.maxCapacity} orders</h4>
+                  <div className="space-y-2 text-sm text-gray-700">
+                    <div className="flex justify-between">
+                      <span>🟢 Low Demand (0-24%):</span>
+                      <span>0-{Math.floor(restaurantProfile.maxCapacity * 0.24)} orders</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>🟡 Medium Demand (25-49%):</span>
+                      <span>{Math.floor(restaurantProfile.maxCapacity * 0.25)}-{Math.floor(restaurantProfile.maxCapacity * 0.49)} orders</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>🟠 High Demand (50-74%):</span>
+                      <span>{Math.floor(restaurantProfile.maxCapacity * 0.50)}-{Math.floor(restaurantProfile.maxCapacity * 0.74)} orders</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>🔴 Very High Demand (75%+):</span>
+                      <span>{Math.floor(restaurantProfile.maxCapacity * 0.75)}+ orders</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

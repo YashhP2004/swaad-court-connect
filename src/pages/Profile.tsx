@@ -458,7 +458,7 @@ export default function Profile() {
                   <TrendingUp className="w-8 h-8 text-white" />
                 </div>
                 <div className="text-right">
-                  <div className="text-5xl font-bold mb-1">₹{profile.totalSpent || 0}</div>
+                  <div className="text-5xl font-bold mb-1">₹{Math.round(profile.totalSpent || 0)}</div>
                   <div className="text-emerald-100 font-medium">Total Spent</div>
                 </div>
               </div>
@@ -545,7 +545,7 @@ export default function Profile() {
                         <p className="text-muted-foreground font-medium">{order.restaurantName}</p>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-2xl mb-1">₹{order.pricing?.totalAmount || order.totalAmount}</p>
+                        <p className="font-bold text-2xl mb-1">₹{Math.round(order.pricing?.totalAmount || order.totalAmount)}</p>
                         <p className="text-sm text-muted-foreground flex items-center gap-1 justify-end">
                           <Clock className="w-4 h-4" />
                           {(order.createdAt instanceof Date

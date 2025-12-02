@@ -249,29 +249,29 @@ export default function OrdersManagement() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="border-0 shadow-lg">
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-gray-900">{stats.totalOrders}</div>
-            <div className="text-sm text-gray-600">Total Orders</div>
+            <div className="text-2xl font-bold text-white">{stats.totalOrders}</div>
+            <div className="text-sm text-white/70">Total Orders</div>
           </CardContent>
         </Card>
 
         <Card className="border-0 shadow-lg">
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-green-600">₹{Math.round(stats.totalRevenue).toLocaleString()}</div>
-            <div className="text-sm text-gray-600">Revenue</div>
+            <div className="text-2xl font-bold text-green-400">₹{Math.round(stats.totalRevenue).toLocaleString()}</div>
+            <div className="text-sm text-white/70">Revenue</div>
           </CardContent>
         </Card>
 
         <Card className="border-0 shadow-lg">
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-yellow-600">{stats.pendingOrders}</div>
-            <div className="text-sm text-gray-600">Pending</div>
+            <div className="text-2xl font-bold text-yellow-400">{stats.pendingOrders}</div>
+            <div className="text-sm text-white/70">Pending</div>
           </CardContent>
         </Card>
 
         <Card className="border-0 shadow-lg">
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-blue-600">{stats.completedOrders}</div>
-            <div className="text-sm text-gray-600">Completed</div>
+            <div className="text-2xl font-bold text-blue-400">{stats.completedOrders}</div>
+            <div className="text-sm text-white/70">Completed</div>
           </CardContent>
         </Card>
       </div>

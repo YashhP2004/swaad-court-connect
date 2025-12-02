@@ -196,7 +196,14 @@ const OrderCard = ({ order }: { order: Order }) => {
               <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <Calendar className="w-4 h-4" />
-                  {formatDistanceToNow(order.createdAt, { addSuffix: true })}
+                  {formatDistanceToNow(
+                    order.createdAt instanceof Date
+                      ? order.createdAt
+                      : typeof order.createdAt === 'string'
+                        ? new Date(order.createdAt)
+                        : order.createdAt.toDate(),
+                    { addSuffix: true }
+                  )}
                 </div>
               </div>
             </div>
@@ -395,7 +402,7 @@ export default function Orders() {
                         </div>
                         <div className="text-right">
                           <span className="text-sm text-muted-foreground block">Total Value</span>
-                          <span className="text-lg font-semibold">₹{total.toFixed(2)}</span>
+                          <span className="text-lg font-semibold">₹{total.toFixed(0)}</span>
                         </div>
                       </div>
                       <div className="space-y-4">
@@ -442,7 +449,7 @@ export default function Orders() {
                         </div>
                         <div className="text-right">
                           <span className="text-sm text-muted-foreground block">Total Value</span>
-                          <span className="text-lg font-semibold">₹{total.toFixed(2)}</span>
+                          <span className="text-lg font-semibold">₹{total.toFixed(0)}</span>
                         </div>
                       </div>
                       <div className="space-y-4">

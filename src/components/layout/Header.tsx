@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { 
-  Search, 
-  ShoppingCart, 
-  User, 
+import {
+  Search,
+  ShoppingCart,
+  User,
   Menu,
   Sun,
   Moon,
@@ -47,8 +47,8 @@ export function Header({ onMenuClick, showMenuButton = false }: HeaderProps) {
           {/* Left Section */}
           <div className="flex items-center gap-4">
             {showMenuButton && (
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="icon-sm"
                 onClick={onMenuClick}
                 className="md:hidden"
@@ -56,7 +56,7 @@ export function Header({ onMenuClick, showMenuButton = false }: HeaderProps) {
                 <Menu className="h-5 w-5" />
               </Button>
             )}
-            
+
             <Link to="/" className="flex items-center gap-2">
               <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
                 <span className="text-primary-foreground font-bold text-lg">S</span>
@@ -69,8 +69,8 @@ export function Header({ onMenuClick, showMenuButton = false }: HeaderProps) {
 
           {/* Center Section - Navigation (hidden on mobile) */}
           <nav className="hidden md:flex items-center gap-6">
-            <Link 
-              to="/" 
+            <Link
+              to="/"
               className={cn(
                 "text-sm font-medium transition-colors hover:text-primary",
                 isActive('/') ? 'text-primary' : 'text-muted-foreground'
@@ -78,8 +78,8 @@ export function Header({ onMenuClick, showMenuButton = false }: HeaderProps) {
             >
               Home
             </Link>
-            <Link 
-              to="/restaurants" 
+            <Link
+              to="/restaurants"
               className={cn(
                 "text-sm font-medium transition-colors hover:text-primary",
                 isActive('/restaurants') ? 'text-primary' : 'text-muted-foreground'
@@ -87,8 +87,8 @@ export function Header({ onMenuClick, showMenuButton = false }: HeaderProps) {
             >
               Restaurants
             </Link>
-            <Link 
-              to="/orders" 
+            <Link
+              to="/orders"
               className={cn(
                 "text-sm font-medium transition-colors hover:text-primary",
                 isActive('/orders') ? 'text-primary' : 'text-muted-foreground'
@@ -146,8 +146,8 @@ export function Header({ onMenuClick, showMenuButton = false }: HeaderProps) {
                           exit={{ scale: 0.5, opacity: 0 }}
                           className="absolute -top-1 -right-1"
                         >
-                          <Badge 
-                            variant="destructive" 
+                          <Badge
+                            variant="destructive"
                             className="h-5 w-5 flex items-center justify-center p-0 text-xs animate-cart-bounce"
                           >
                             {totalItems > 9 ? '9+' : totalItems}
@@ -170,8 +170,8 @@ export function Header({ onMenuClick, showMenuButton = false }: HeaderProps) {
               >
                 <Link to="/profile">
                   {user?.avatar ? (
-                    <img 
-                      src={user.avatar} 
+                    <img
+                      src={user.avatar}
                       alt={user.name}
                       className="h-6 w-6 rounded-full object-cover"
                     />
@@ -195,7 +195,7 @@ export function Header({ onMenuClick, showMenuButton = false }: HeaderProps) {
 function CartSidebar() {
   const { items, updateQuantity, removeItem, getTotalPrice } = useCart();
   const totalPrice = getTotalPrice();
-  
+
   // Group items by restaurant
   const itemsByRestaurant = items.reduce((acc, item) => {
     if (!acc[item.restaurantId]) {
@@ -215,7 +215,7 @@ function CartSidebar() {
           <SheetTitle>Your Cart</SheetTitle>
         </SheetHeader>
         <div className="flex flex-col items-center justify-center h-[70vh]">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
@@ -243,15 +243,15 @@ function CartSidebar() {
       <SheetHeader className="text-left">
         <SheetTitle>Your Cart</SheetTitle>
       </SheetHeader>
-      
+
       <div className="mt-6 space-y-6">
         {Object.entries(itemsByRestaurant).map(([restaurantId, restaurant]) => (
           <div key={restaurantId} className="space-y-4">
             <h3 className="font-medium text-lg">{restaurant.restaurantName}</h3>
             <div className="space-y-3">
               {restaurant.items.map((item) => (
-                <motion.div 
-                  key={item.uniqueId} 
+                <motion.div
+                  key={item.uniqueId}
                   layout
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -259,8 +259,8 @@ function CartSidebar() {
                   className="flex gap-3 p-3 border rounded-lg group hover:shadow-sm transition-all"
                 >
                   <div className="relative min-w-[60px] h-[60px] rounded-md overflow-hidden">
-                    <img 
-                      src={item.image} 
+                    <img
+                      src={item.image}
                       alt={item.name}
                       className="w-full h-full object-cover"
                     />
@@ -272,21 +272,21 @@ function CartSidebar() {
                     <div className="flex justify-between items-start">
                       <div>
                         <h4 className="font-medium text-sm">{item.name}</h4>
-                        {item.selectedCustomizations && item.selectedCustomizations.length > 0 && (
+                        {item.customizations && item.customizations.length > 0 && (
                           <p className="text-xs text-muted-foreground">
-                            {item.selectedCustomizations.map(c => 
+                            {item.customizations.map(c =>
                               c.selectedOptions.map(o => o.name).join(', ')
                             ).join(', ')}
                           </p>
                         )}
                         <div className="mt-1">
-                          <span className="font-medium text-sm">₹{item.totalPrice.toFixed(2)}</span>
+                          <span className="font-medium text-sm">₹{item.totalPrice.toFixed(0)}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="icon-xs"
+                        <Button
+                          variant="outline"
+                          size="icon-sm"
                           onClick={() => updateQuantity(item.uniqueId, Math.max(1, item.quantity - 1))}
                           disabled={item.quantity <= 1}
                           className="h-6 w-6 rounded-full"
@@ -294,17 +294,17 @@ function CartSidebar() {
                           <Minus className="h-3 w-3" />
                         </Button>
                         <span className="text-sm font-medium w-4 text-center">{item.quantity}</span>
-                        <Button 
-                          variant="outline" 
-                          size="icon-xs"
+                        <Button
+                          variant="outline"
+                          size="icon-sm"
                           onClick={() => updateQuantity(item.uniqueId, item.quantity + 1)}
                           className="h-6 w-6 rounded-full"
                         >
                           <Plus className="h-3 w-3" />
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon-xs"
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
                           onClick={() => removeItem(item.uniqueId)}
                           className="h-6 w-6 text-destructive hover:text-destructive/90 hover:bg-destructive/10"
                         >
@@ -324,7 +324,7 @@ function CartSidebar() {
         <div className="space-y-2 mb-4">
           <div className="flex justify-between text-sm">
             <span>Subtotal</span>
-            <span>₹{totalPrice.toFixed(2)}</span>
+            <span>₹{totalPrice.toFixed(0)}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span>Delivery Fee</span>
@@ -332,7 +332,7 @@ function CartSidebar() {
           </div>
           <div className="flex justify-between text-sm font-medium">
             <span>Total</span>
-            <span>₹{totalPrice.toFixed(2)}</span>
+            <span>₹{totalPrice.toFixed(0)}</span>
           </div>
         </div>
         <Button className="w-full" size="lg" asChild>

@@ -120,6 +120,16 @@ export async function createOrder(orderData: Partial<Order>): Promise<string> {
 
         createdOrderIds.push(orderId);
         console.log(`Order created: ${orderId} for restaurant: ${restaurantId}`);
+
+        // Update active orders count for restaurant
+        try {
+            const restaurantRef = doc(db, 'restaurants', restaurantId);
+            await updateDoc(restaurantRef, {
+                activeOrders: increment(1)
+            });
+        } catch (error) {
+            console.error(`Error updating active orders for restaurant ${restaurantId}:`, error);
+        }
     }
 
     // Update user stats with total amount
@@ -271,6 +281,16 @@ export function getOrderStatusColor(status: OrderStatus): string {
 export async function updateOrderStatus(orderId: string, status: VendorOrderStatus, vendorId: string): Promise<void> {
     try {
         const orderRef = doc(db, 'orders', orderId);
+
+        // Get current order state to check for status transitions
+        const currentOrderSnap = await getDoc(orderRef);
+        if (!currentOrderSnap.exists()) {
+            throw new Error('Order not found');
+        }
+        const currentOrderData = currentOrderSnap.data();
+        const prevVendorStatus = currentOrderData.vendorStatus;
+        const restaurantId = currentOrderData.restaurantId;
+
         const statusMap: Record<VendorOrderStatus, OrderStatus> = {
             queued: 'Placed',
             preparing: 'Preparing',
@@ -306,6 +326,27 @@ export async function updateOrderStatus(orderId: string, status: VendorOrderStat
         }
 
         await updateDoc(orderRef, updateData);
+
+        // Update restaurant active orders count based on transition
+        // Active statuses: queued, preparing
+        const isActive = (s: string) => ['queued', 'preparing'].includes(s);
+        const wasActive = isActive(prevVendorStatus);
+        const isNowActive = isActive(status);
+
+        if (restaurantId) {
+            const restaurantRef = doc(db, 'restaurants', restaurantId);
+            if (wasActive && !isNowActive) {
+                // Transitioned from active to inactive (e.g., preparing -> ready)
+                await updateDoc(restaurantRef, {
+                    activeOrders: increment(-1)
+                }).catch(e => console.error('Error decrementing active orders:', e));
+            } else if (!wasActive && isNowActive) {
+                // Transitioned from inactive to active (unlikely but possible)
+                await updateDoc(restaurantRef, {
+                    activeOrders: increment(1)
+                }).catch(e => console.error('Error incrementing active orders:', e));
+            }
+        }
 
         const orderSnap = await getDoc(orderRef);
         if (orderSnap.exists()) {

@@ -157,7 +157,10 @@ export default function UserManagement() {
     const totalUsers = filteredUsers.length;
     const activeUsers = filteredUsers.filter(user => user.status === 'active').length;
     const suspendedUsers = filteredUsers.filter(user => user.status === 'suspended').length;
-    const totalRevenue = filteredUsers.reduce((sum, user) => sum + (user.totalSpent || 0), 0);
+    const totalRevenue = filteredUsers.reduce((sum, user) => {
+      const spent = Number(user.totalSpent) || 0;
+      return sum + (isNaN(spent) ? 0 : spent);
+    }, 0);
 
     return { totalUsers, activeUsers, suspendedUsers, totalRevenue };
   };
@@ -271,7 +274,7 @@ export default function UserManagement() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-500">Total Revenue</p>
-                <h3 className="text-2xl font-bold text-purple-600 mt-1">₹{stats.totalRevenue.toLocaleString()}</h3>
+                <h3 className="text-2xl font-bold text-purple-600 mt-1">₹{Math.round(stats.totalRevenue).toLocaleString()}</h3>
               </div>
               <div className="p-3 bg-purple-50 rounded-full">
                 <DollarSign className="w-6 h-6 text-purple-600" />

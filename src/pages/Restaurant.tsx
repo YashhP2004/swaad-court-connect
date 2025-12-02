@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  Star, 
-  Clock, 
+import {
+  ArrowLeft,
+  Star,
+  Clock,
   MapPin,
   Plus,
   Minus,
@@ -30,11 +30,11 @@ import { useCart } from '@/context/cart-context';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
-import { 
-  fetchRestaurantMenu, 
-  MenuItem, 
-  MenuItemCustomization, 
-  fetchRestaurant 
+import {
+  fetchRestaurantMenu,
+  MenuItem,
+  MenuItemCustomization,
+  fetchRestaurant
 } from '@/lib/firebase';
 import { toast } from '@/hooks/use-toast';
 
@@ -79,7 +79,7 @@ export default function Restaurant() {
   }
   );
 
-  const categories = menuItems 
+  const categories = menuItems
     ? ['All', ...Array.from(new Set(menuItems.map(item => item.category)))]
     : ['All'];
 
@@ -202,21 +202,21 @@ export default function Restaurant() {
   return (
     <div className="min-h-screen bg-gradient-warm">
       {/* Header with Cover Image */}
-      <motion.div 
+      <motion.div
         className="relative h-64 overflow-hidden"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <img 
-          src={selectedItem?.image} 
-          alt={selectedItem?.name}
+        <img
+          src={restaurantData?.image || '/placeholder-restaurant.jpg'}
+          alt={restaurantData?.name}
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-background/20" />
-        
+
         {/* Back Button */}
-        <motion.div 
+        <motion.div
           className="absolute top-4 left-4 z-10"
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -231,7 +231,7 @@ export default function Restaurant() {
         </motion.div>
 
         {/* Action Buttons */}
-        <motion.div 
+        <motion.div
           className="absolute top-4 right-4 z-10 flex gap-2"
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -247,7 +247,7 @@ export default function Restaurant() {
       </motion.div>
 
       {/* Controls */}
-      <motion.div 
+      <motion.div
         className="sticky top-16 bg-background/80 backdrop-blur-sm border-b z-40 py-4"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -255,8 +255,8 @@ export default function Restaurant() {
       >
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-4">
-            <VegNonVegToggle 
-              isVeg={isVegOnly} 
+            <VegNonVegToggle
+              isVeg={isVegOnly}
               onToggle={setIsVegOnly}
               className="animate-float"
             />
@@ -265,7 +265,7 @@ export default function Restaurant() {
               <span>Fresh & Made to Order</span>
             </div>
           </div>
-          
+
           {/* Category Filter */}
           <div className="flex gap-2 overflow-x-auto pb-2">
             {categories.map((category, index) => (
@@ -291,7 +291,7 @@ export default function Restaurant() {
 
       {/* Menu Items */}
       <div className="container mx-auto px-4 py-8">
-        <motion.div 
+        <motion.div
           className="space-y-6"
           initial="hidden"
           animate="visible"
@@ -312,7 +312,7 @@ export default function Restaurant() {
               }}
               transition={{ duration: 0.5 }}
             >
-              <Card 
+              <Card
                 className="group hover:shadow-lg transition-shadow duration-300 border-0 shadow-food"
                 onClick={() => setSelectedItem(item)}
               >
@@ -337,7 +337,7 @@ export default function Restaurant() {
                               </Badge>
                             )}
                           </div>
-                          
+
                           <div className="flex items-center gap-3 mb-2 text-sm text-muted-foreground">
                             <div className="flex items-center gap-1">
                               <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
@@ -356,12 +356,12 @@ export default function Restaurant() {
                               </div>
                             )}
                           </div>
-                          
+
                           <p className="text-sm text-muted-foreground mb-3">{item.description}</p>
-                          
+
                           <div className="flex items-center justify-between">
                             <span className="text-xl font-bold text-primary">₹{item.price}</span>
-                            
+
                             <Button
                               variant="default"
                               size="sm"
@@ -378,10 +378,10 @@ export default function Restaurant() {
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="relative w-24 h-24 rounded-lg overflow-hidden">
-                      <img 
-                        src={item.image} 
+                      <img
+                        src={item.image}
                         alt={item.name}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                       />
@@ -430,7 +430,7 @@ export default function Restaurant() {
 
                 {customization.required ? (
                   <RadioGroup
-                    onValueChange={(value) => 
+                    onValueChange={(value) =>
                       handleCustomizationChange(customization.id, value, true)
                     }
                     value={selectedCustomizations
@@ -466,7 +466,7 @@ export default function Restaurant() {
                           <Checkbox
                             id={option.id}
                             checked={isSelected}
-                            onCheckedChange={() => 
+                            onCheckedChange={() =>
                               handleCustomizationChange(customization.id, option.id, false)
                             }
                           />

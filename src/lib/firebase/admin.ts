@@ -213,12 +213,36 @@ export async function getAllVendors(status?: string) {
             // Fetch menu items count
             let menuItemsCount = restaurantData.menuItemsCount || 0;
             try {
-                // Try fetching from vendors collection (primary)
+                // Try fetching from top-level menuItems collection (primary location)
+                let topLevelCount = 0;
+                if (restaurantData.id) {
+                    const topLevelMenuQuery = query(
+                        collection(db, 'menuItems'),
+                        where('restaurantId', '==', restaurantData.id)
+                    );
+                    const topLevelMenuSnapshot = await getDocs(topLevelMenuQuery);
+                    topLevelCount = topLevelMenuSnapshot.size;
+                }
+
+                // Also try with vendor ID in case menu items are linked that way
+                let vendorIdCount = 0;
+                try {
+                    const vendorIdMenuQuery = query(
+                        collection(db, 'menuItems'),
+                        where('restaurantId', '==', vendorId)
+                    );
+                    const vendorIdMenuSnapshot = await getDocs(vendorIdMenuQuery);
+                    vendorIdCount = vendorIdMenuSnapshot.size;
+                } catch (err) {
+                    // Ignore if this fails
+                }
+
+                // Try fetching from vendors collection (fallback 1)
                 const vendorMenuRef = collection(db, 'vendors', vendorId, 'menuItems');
                 const vendorMenuSnapshot = await getDocs(vendorMenuRef);
                 const vendorCount = vendorMenuSnapshot.size;
 
-                // Try fetching from restaurants collection (fallback 1: menuItems)
+                // Try fetching from restaurants collection (fallback 2: menuItems)
                 let restaurantCount = 0;
                 let restaurantMenuCount = 0;
 
@@ -235,9 +259,9 @@ export async function getAllVendors(status?: string) {
                 }
 
                 // Use the largest count found
-                menuItemsCount = Math.max(vendorCount, restaurantCount, restaurantMenuCount, menuItemsCount);
+                menuItemsCount = Math.max(topLevelCount, vendorIdCount, vendorCount, restaurantCount, restaurantMenuCount, menuItemsCount);
 
-                console.log(`Vendor ${vendorId}: Menu count = ${menuItemsCount} (Vendor: ${vendorCount}, RestItems: ${restaurantCount}, RestMenu: ${restaurantMenuCount})`);
+                console.log(`Vendor ${vendorId}: Menu count = ${menuItemsCount} (TopLevel: ${topLevelCount}, VendorId: ${vendorIdCount}, Vendor: ${vendorCount}, RestItems: ${restaurantCount}, RestMenu: ${restaurantMenuCount})`);
 
             } catch (err) {
                 console.warn('Could not fetch menu count', err);

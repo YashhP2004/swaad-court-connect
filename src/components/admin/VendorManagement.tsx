@@ -22,8 +22,7 @@ import {
   AlertTriangle,
   Ban,
   Play,
-  Pause,
-  Key
+  Pause
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -42,9 +41,7 @@ import {
   approveVendorById,
   rejectVendorById,
   suspendVendorById,
-  activateVendorById,
-  sendVendorPasswordReset,
-  getVendorInfoForPasswordReset
+  activateVendorById
 } from '@/lib/firebase';
 
 interface Vendor {
@@ -79,8 +76,6 @@ export default function VendorManagement() {
   const [rejectionReason, setRejectionReason] = useState('');
   const [suspensionReason, setSuspensionReason] = useState('');
   const [commissionRate, setCommissionRate] = useState(10);
-  const [showPasswordResetDialog, setShowPasswordResetDialog] = useState(false);
-  const [passwordResetEmail, setPasswordResetEmail] = useState('');
 
   useEffect(() => {
     loadVendors();
@@ -208,36 +203,6 @@ export default function VendorManagement() {
     }
   };
 
-  const handlePasswordReset = async () => {
-    if (!passwordResetEmail.trim()) {
-      toast.error('Please enter vendor email address');
-      return;
-    }
-
-    setActionLoading('password-reset');
-    try {
-      // First verify the vendor exists
-      const vendorInfo = await getVendorInfoForPasswordReset(passwordResetEmail);
-
-      if (!vendorInfo) {
-        toast.error('No vendor found with this email address');
-        return;
-      }
-
-      // Send password reset email
-      await sendVendorPasswordReset(passwordResetEmail);
-
-      toast.success(`Password reset email sent to ${passwordResetEmail}`);
-      setShowPasswordResetDialog(false);
-      setPasswordResetEmail('');
-
-    } catch (error) {
-      console.error('Error sending password reset:', error);
-      toast.error('Failed to send password reset email');
-    } finally {
-      setActionLoading(null);
-    }
-  };
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -313,15 +278,15 @@ export default function VendorManagement() {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card className="border-0 shadow-lg">
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-white-900">{stats.total}</div>
-            <div className="text-sm text-gray-600-bold">Total Restaurants</div>
+            <div className="text-2xl font-bold text-white">{stats.total}</div>
+            <div className="text-sm text-white/70">Total Restaurants</div>
           </CardContent>
         </Card>
 
         <Card className="border-0 shadow-lg">
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-green-600">{stats.active}</div>
-            <div className="text-sm text-gray-600-bold">Active</div>
+            <div className="text-2xl font-bold text-green-400">{stats.active}</div>
+            <div className="text-sm text-white/70">Active</div>
           </CardContent>
         </Card>
 
@@ -329,15 +294,15 @@ export default function VendorManagement() {
 
         <Card className="border-0 shadow-lg">
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-orange-600">{stats.inactive}</div>
-            <div className="text-sm text-gray-600-bold">Inactive</div>
+            <div className="text-2xl font-bold text-orange-400">{stats.inactive}</div>
+            <div className="text-sm text-white/70">Inactive</div>
           </CardContent>
         </Card>
 
         <Card className="border-0 shadow-lg">
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-red-600">{stats.suspended}</div>
-            <div className="text-sm text-gray-600-bold">Suspended</div>
+            <div className="text-2xl font-bold text-red-400">{stats.suspended}</div>
+            <div className="text-sm text-white/70">Suspended</div>
           </CardContent>
         </Card>
       </div>
@@ -437,7 +402,9 @@ export default function VendorManagement() {
                       {/* Restaurant Stats */}
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
                         <div className="text-center">
-                          <div className="text-lg font-semibold text-gray-900">{vendor.menuItemsCount}</div>
+                          <div className="text-lg font-semibold text-gray-900">
+                            {vendor.menuItemsCount > 0 ? vendor.menuItemsCount : '-'}
+                          </div>
                           <div className="text-xs text-gray-600">Menu Items</div>
                         </div>
                         {vendor.flaggedItemsCount > 0 && (
@@ -469,74 +436,18 @@ export default function VendorManagement() {
                         View Details
                       </Button>
 
-                      {/* Password Reset Button - Available for all vendors */}
-                      <Dialog open={showPasswordResetDialog && selectedVendor?.id === vendor.id} onOpenChange={setShowPasswordResetDialog}>
-                        <DialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            onClick={() => {
-                              setSelectedVendor(vendor);
-                              setPasswordResetEmail(vendor.email || '');
-                            }}
-                            className="gap-2 text-orange-600 border-orange-200 hover:bg-orange-50"
-                            disabled={actionLoading === 'password-reset'}
-                          >
-                            <Key className="w-4 h-4" />
-                            Reset Password
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Send Password Reset Email</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-4">
-                            <div className="p-4 bg-blue-50 rounded-lg">
-                              <div className="flex items-start gap-3">
-                                <Key className="w-5 h-5 text-blue-600 mt-0.5" />
-                                <div>
-                                  <h4 className="font-medium text-blue-900">Secure Password Reset</h4>
-                                  <p className="text-sm text-blue-700 mt-1">
-                                    This will send a secure password reset link to the vendor's email.
-                                    They can use this link to create a new password safely.
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div>
-                              <Label htmlFor="resetEmail">Vendor Email Address</Label>
-                              <Input
-                                id="resetEmail"
-                                type="email"
-                                value={passwordResetEmail}
-                                onChange={(e) => setPasswordResetEmail(e.target.value)}
-                                placeholder="Enter vendor email address"
-                                className="mt-1"
-                              />
-                            </div>
-
-                            <div className="flex gap-3">
-                              <Button
-                                onClick={handlePasswordReset}
-                                disabled={actionLoading === 'password-reset' || !passwordResetEmail.trim()}
-                                className="flex-1 bg-orange-600 hover:bg-orange-700"
-                              >
-                                {actionLoading === 'password-reset' ? 'Sending...' : 'Send Reset Email'}
-                              </Button>
-                              <Button
-                                variant="outline"
-                                onClick={() => {
-                                  setShowPasswordResetDialog(false);
-                                  setPasswordResetEmail('');
-                                }}
-                                className="flex-1"
-                              >
-                                Cancel
-                              </Button>
-                            </div>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
+                      {/* Edit Vendor Button - More relevant than password reset */}
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedVendor(vendor);
+                          toast.info('Edit vendor feature coming soon!');
+                        }}
+                        className="gap-2 text-blue-600 border-blue-200 hover:bg-blue-50"
+                      >
+                        <Edit className="w-4 h-4" />
+                        Edit Vendor
+                      </Button>
 
                       {vendor.status === 'pending' && (
                         <>
@@ -637,7 +548,8 @@ export default function VendorManagement() {
                         </>
                       )}
 
-                      {vendor.status === 'approved' && (
+
+                      {(vendor.status === 'approved' || vendor.status === 'active') && (
                         <Dialog open={showSuspensionDialog && selectedVendor?.id === vendor.id} onOpenChange={setShowSuspensionDialog}>
                           <DialogTrigger asChild>
                             <Button
@@ -686,6 +598,7 @@ export default function VendorManagement() {
                           </DialogContent>
                         </Dialog>
                       )}
+
 
                       {vendor.status === 'suspended' && (
                         <Button

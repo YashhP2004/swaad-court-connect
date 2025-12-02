@@ -184,7 +184,7 @@ export async function calculateVendorPendingBalances(): Promise<VendorBalance[]>
 
         console.log(`💰 Vendors with pending balance: ${result.length}`);
         result.forEach(v => {
-            console.log(`  - ${v.vendorName}: ₹${v.pendingBalance.toFixed(2)} (${v.orderCount} orders)`);
+            console.log(`  - ${v.vendorName}: ₹${v.pendingBalance.toFixed(0)} (${v.orderCount} orders)`);
         });
 
         return result;

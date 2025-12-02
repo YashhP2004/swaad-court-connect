@@ -95,6 +95,7 @@ export async function getVendorProfile(vendorId: string): Promise<any> {
             status: userData.status || 'active',
             commissionRate: userData.commissionRate || 10,
             createdAt: userData.createdAt,
+            maxCapacity: userData.maxCapacity || 15,
             ...restaurantData
         };
     } catch (error) {
@@ -110,6 +111,24 @@ export async function updateVendorProfile(vendorId: string, profileData: any): P
             ...profileData,
             updatedAt: Timestamp.now()
         });
+
+        // Also update restaurant collection if relevant fields are changed
+        const vendorSnap = await getDoc(vendorRef);
+        if (vendorSnap.exists()) {
+            const restaurantId = vendorSnap.data().restaurantId;
+            if (restaurantId) {
+                const restaurantUpdates: any = {};
+                if (profileData.maxCapacity !== undefined) restaurantUpdates.maxCapacity = profileData.maxCapacity;
+
+                if (Object.keys(restaurantUpdates).length > 0) {
+                    const restaurantRef = doc(db, 'restaurants', restaurantId);
+                    await updateDoc(restaurantRef, {
+                        ...restaurantUpdates,
+                        updatedAt: Timestamp.now()
+                    });
+                }
+            }
+        }
     } catch (error) {
         console.error('Error updating vendor profile:', error);
         throw error;
@@ -687,4 +706,20 @@ export async function createVendorCredentials(): Promise<any> {
     }
 
     return { results, errors };
+}
+
+export async function updateRestaurantActiveCount(restaurantId: string, activeCount: number, maxCapacity?: number): Promise<void> {
+    try {
+        const restaurantRef = doc(db, 'restaurants', restaurantId);
+        const updates: any = {
+            activeOrders: activeCount,
+            updatedAt: Timestamp.now()
+        };
+        if (maxCapacity !== undefined) {
+            updates.maxCapacity = maxCapacity;
+        }
+        await updateDoc(restaurantRef, updates);
+    } catch (error) {
+        console.error('Error updating restaurant active count:', error);
+    }
 }

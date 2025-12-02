@@ -19,3 +19,5 @@ export {
     type VendorPayout,
     type VendorBalance
 } from './payout';
+export { getRestaurantsRealtime } from './restaurants';
+export { updateRestaurantActiveCount } from './vendor';

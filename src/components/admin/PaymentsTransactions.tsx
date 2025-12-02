@@ -365,7 +365,7 @@ export default function PaymentsTransactions() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Total Revenue</p>
+                <p className="text-sm text-white/70 mb-1">Total Revenue</p>
                 <p className="text-2xl font-bold text-green-600">₹{stats.totalRevenue.toLocaleString()}</p>
                 <p className="text-xs text-gray-500 mt-1">Click to view details</p>
               </div>
@@ -383,7 +383,7 @@ export default function PaymentsTransactions() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Total Refunds</p>
+                <p className="text-sm text-white/70 mb-1">Total Refunds</p>
                 <p className="text-2xl font-bold text-red-600">₹{stats.totalRefunds.toLocaleString()}</p>
                 <p className="text-xs text-gray-500 mt-1">Click to view details</p>
               </div>
@@ -401,7 +401,7 @@ export default function PaymentsTransactions() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Commission Earned</p>
+                <p className="text-sm text-white/70 mb-1">Commission Earned</p>
                 <p className="text-2xl font-bold text-purple-600">₹{stats.totalCommission.toLocaleString()}</p>
                 <p className="text-xs text-gray-500 mt-1">Click to view details</p>
               </div>
@@ -419,7 +419,7 @@ export default function PaymentsTransactions() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Pending Payouts</p>
+                <p className="text-sm text-white/70 mb-1">Pending Payouts</p>
                 <p className="text-2xl font-bold text-orange-600">₹{stats.pendingPayouts.toLocaleString()}</p>
                 <p className="text-xs text-gray-500 mt-1">Click for vendor breakdown</p>
               </div>

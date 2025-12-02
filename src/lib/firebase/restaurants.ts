@@ -9,7 +9,8 @@ import {
     limit,
     updateDoc,
     deleteDoc,
-    Timestamp
+    Timestamp,
+    onSnapshot
 } from 'firebase/firestore';
 import { db } from './config';
 import { Restaurant, MenuItem } from '../types';
@@ -67,6 +68,20 @@ export async function fetchRestaurants(): Promise<Restaurant[]> {
     const restaurantsRef = collection(db, 'restaurants');
     const snapshot = await getDocs(restaurantsRef);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Restaurant));
+}
+
+export function getRestaurantsRealtime(callback: (restaurants: Restaurant[]) => void): () => void {
+    const restaurantsRef = collection(db, 'restaurants');
+
+    return onSnapshot(restaurantsRef, (snapshot) => {
+        const restaurants = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        } as Restaurant));
+        callback(restaurants);
+    }, (error) => {
+        console.error('Error getting realtime restaurants:', error);
+    });
 }
 
 export async function fetchRestaurantMenu(restaurantId: string): Promise<MenuItem[]> {

@@ -89,6 +89,11 @@ export interface Restaurant {
     averageRating: number;
     completionRate: number;
   };
+  isOpen?: boolean;
+  // Demand indicator properties
+  activeOrders?: number;
+  maxCapacity?: number;
+  orderVelocity?: number;
   createdAt?: Timestamp | Date;
   updatedAt?: Timestamp | Date;
 }

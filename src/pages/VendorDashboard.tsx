@@ -20,7 +20,8 @@ import {
   Users,
   Star,
   ArrowRight,
-  CheckCircle
+  CheckCircle,
+  RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,7 +37,8 @@ import {
   getVendorProfile,
   getVendorStats,
   getVendorAnalytics,
-  updateOrderStatus
+  updateOrderStatus,
+  updateRestaurantActiveCount
 } from '@/lib/firebase';
 
 // Import dashboard components
@@ -45,6 +47,14 @@ import SalesAnalytics from '@/components/vendor/SalesAnalytics';
 import MenuManagement from '@/components/vendor/MenuManagement';
 import BillingTransactions from '@/components/vendor/BillingTransactions';
 import VendorSettings from '@/components/vendor/VendorSettings';
+import { DemandOverview } from '@/components/vendor/DemandDashboard';
+import {
+  calculateOrderVelocityFromOrders,
+  calculateDemandScore,
+  calculateDynamicWaitTime,
+  getDemandLevel,
+  calculateCapacityUtilization
+} from '@/utils/demandCalculations';
 
 interface DashboardStats {
   todayOrders: number;
@@ -68,6 +78,8 @@ interface VendorProfile {
   logo?: string;
   rating: number;
   isOpen: boolean;
+  maxCapacity?: number;
+  restaurantId?: string;
 }
 
 // Dashboard Overview Component
@@ -75,12 +87,16 @@ const DashboardOverview = ({
   stats,
   recentOrders,
   vendorProfile,
-  onTabChange
+  onTabChange,
+  onRefresh,
+
 }: {
   stats: DashboardStats;
   recentOrders: any[];
   vendorProfile: VendorProfile | null;
   onTabChange: (tab: string) => void;
+  onRefresh: () => void;
+
 }) => {
   // Calculate top selling items from recent orders (client-side approximation for "Trending Now")
   const getTrendingItems = () => {
@@ -107,7 +123,7 @@ const DashboardOverview = ({
   const handleAcceptOrder = async (orderId: string) => {
     if (!vendorProfile?.id) return;
     try {
-      await updateOrderStatus(orderId, 'accepted', vendorProfile.id);
+      await updateOrderStatus(orderId, 'preparing', vendorProfile.id);
       toast.success('Order accepted');
     } catch (error) {
       toast.error('Failed to accept order');
@@ -162,6 +178,15 @@ const DashboardOverview = ({
             </div>
 
             <div className="flex gap-3">
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onRefresh}
+                className="bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm transition-all"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </Button>
               <Button
                 onClick={() => onTabChange('orders')}
                 className="bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-lg shadow-orange-500/25 transition-all hover:scale-105"
@@ -239,14 +264,38 @@ const DashboardOverview = ({
                   </span>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500 mb-1">{stat.title}</p>
-                  <h3 className="text-2xl font-bold text-gray-900">{stat.value}</h3>
+                  <p className="text-sm font-medium text-white/70 mb-1">{stat.title}</p>
+                  <h3 className="text-2xl font-bold text-white">{stat.value}</h3>
                 </div>
               </CardContent>
             </Card>
           </motion.div>
         ))}
       </div>
+
+      {/* Demand Indicator Section */}
+      {(() => {
+        const activeOrders = recentOrders.filter(o => ['queued', 'preparing'].includes(o.vendorStatus || o.status)).length;
+        const maxCapacity = vendorProfile?.maxCapacity || 15;
+        const orderVelocity = calculateOrderVelocityFromOrders(recentOrders);
+
+        const capacityUtilization = calculateCapacityUtilization(activeOrders, maxCapacity);
+        const demandScore = calculateDemandScore(activeOrders, maxCapacity, orderVelocity);
+        const demandLevel = getDemandLevel(demandScore);
+        const estimatedWaitTime = calculateDynamicWaitTime(15, demandScore);
+
+        const metrics = {
+          activeOrders,
+          orderVelocity,
+          capacityUtilization,
+          demandScore,
+          demandLevel,
+          estimatedWaitTime,
+          lastUpdated: new Date()
+        };
+
+        return <DemandOverview metrics={metrics} maxCapacity={maxCapacity} />;
+      })()}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Recent Orders Section */}
@@ -586,6 +635,19 @@ export default function VendorDashboard() {
     loadVendorData();
   }, [user, navigate, loadVendorData]);
 
+  // Self-correcting mechanism: Sync active orders count to DB
+  useEffect(() => {
+    if (vendorProfile?.restaurantId && recentOrders) {
+      const activeCount = recentOrders.filter(o => ['queued', 'preparing'].includes(o.vendorStatus || o.status)).length;
+      // Only update if we have a valid count
+      if (activeCount >= 0) {
+        updateRestaurantActiveCount(vendorProfile.restaurantId, activeCount, vendorProfile.maxCapacity);
+      }
+    }
+  }, [vendorProfile?.restaurantId, recentOrders, vendorProfile?.maxCapacity]);
+
+
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -742,6 +804,8 @@ export default function VendorDashboard() {
               recentOrders={recentOrders}
               vendorProfile={vendorProfile}
               onTabChange={setActiveTab}
+              onRefresh={loadVendorData}
+
             />
           </TabsContent>
 

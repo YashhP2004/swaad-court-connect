@@ -208,8 +208,8 @@ export default function AdminPanel() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Total Vendors</p>
-                  <p className="text-3xl font-bold text-gray-900">{dashboardStats.totalVendors}</p>
+                  <p className="text-sm text-white/70">Total Vendors</p>
+                  <p className="text-3xl font-bold text-white">{dashboardStats.totalVendors}</p>
                   <div className="flex items-center gap-2 mt-2">
                     <Badge variant={dashboardStats.pendingApprovals > 0 ? "destructive" : "secondary"} className="text-xs">
                       {dashboardStats.pendingApprovals} pending
@@ -233,8 +233,8 @@ export default function AdminPanel() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Total Customers</p>
-                  <p className="text-3xl font-bold text-gray-900">{dashboardStats.totalCustomers.toLocaleString()}</p>
+                  <p className="text-sm text-white/70">Total Customers</p>
+                  <p className="text-3xl font-bold text-white">{dashboardStats.totalCustomers.toLocaleString()}</p>
                   <div className="flex items-center gap-2 mt-2">
                     <Badge variant="secondary" className="text-xs">
                       Active
@@ -258,8 +258,8 @@ export default function AdminPanel() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Total Orders</p>
-                  <p className="text-3xl font-bold text-gray-900">{dashboardStats.totalOrders.toLocaleString()}</p>
+                  <p className="text-sm text-white/70">Total Orders</p>
+                  <p className="text-3xl font-bold text-white">{dashboardStats.totalOrders.toLocaleString()}</p>
                   <div className="flex items-center gap-2 mt-2">
                     {dashboardStats.activeOrders > 0 && (
                       <Badge variant="secondary" className="text-xs">
@@ -285,8 +285,8 @@ export default function AdminPanel() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Platform Revenue</p>
-                  <p className="text-3xl font-bold text-gray-900">₹{Math.round(dashboardStats.totalRevenue).toLocaleString()}</p>
+                  <p className="text-sm text-white/70">Platform Revenue</p>
+                  <p className="text-3xl font-bold text-white">₹{Math.round(dashboardStats.totalRevenue).toLocaleString()}</p>
                   <div className="flex items-center gap-2 mt-2">
                     {dashboardStats.platformCommission > 0 && (
                       <Badge variant="default" className="text-xs">
@@ -306,7 +306,7 @@ export default function AdminPanel() {
 
       {/* Quick Actions & Activity */}
       <div className={`grid grid-cols-1 ${dashboardStats.pendingApprovals > 0 || (dashboardStats as any).flaggedItems > 0 ? 'lg:grid-cols-2' : ''} gap-6`}>
-        {(dashboardStats.pendingApprovals > 0 || (dashboardStats as any).flaggedItems > 0) && (
+        {dashboardStats.pendingApprovals > 0 ? (
           <Card className="border-0 shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -316,17 +316,15 @@ export default function AdminPanel() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {dashboardStats.pendingApprovals > 0 && (
-                  <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-black">Vendor Applications</p>
-                      <p className="text-sm text-gray-600">{dashboardStats.pendingApprovals} waiting for approval</p>
-                    </div>
-                    <Button size="sm" onClick={() => setActiveSection('vendors')}>
-                      Review
-                    </Button>
+                <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
+                  <div>
+                    <p className="font-medium text-black">Vendor Applications</p>
+                    <p className="text-sm text-gray-600">{dashboardStats.pendingApprovals} waiting for approval</p>
                   </div>
-                )}
+                  <Button size="sm" onClick={() => setActiveSection('vendors')}>
+                    Review
+                  </Button>
+                </div>
 
                 {((dashboardStats as any).flaggedItems || 0) > 0 && (
                   <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
@@ -336,11 +334,40 @@ export default function AdminPanel() {
                         {(dashboardStats as any).flaggedItems || 0} items flagged for review
                       </p>
                     </div>
-                    {/* <Button size="sm" variant="outline" onClick={() => setActiveSection('restaurants')}>
-                      Review
-                    </Button> */}
                   </div>
                 )}
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Store className="w-5 h-5 text-green-500" />
+                Active Vendors
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                  <div>
+                    <p className="font-medium text-black">Total Active Vendors</p>
+                    <p className="text-sm text-gray-600">{dashboardStats.totalVendors} restaurants operating</p>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={() => setActiveSection('vendors')}>
+                    View All
+                  </Button>
+                </div>
+
+                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                  <div>
+                    <p className="font-medium text-black">Total Customers</p>
+                    <p className="text-sm text-gray-600">{dashboardStats.totalCustomers} registered users</p>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={() => setActiveSection('users')}>
+                    Manage
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

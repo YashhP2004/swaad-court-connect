@@ -56,20 +56,37 @@ export function getDemandLevel(demandScore: number): DemandLevel {
 }
 
 /**
- * Calculate dynamic wait time based on base time and demand
- * Formula: Base Wait Time × (1 + Demand Score/100)
- * @param baseWaitTime - Base preparation time in minutes
+ * Calculate dynamic wait time based on demand score
+ * Formula: minWait + (maxWait - minWait) * (demandScore / 100)
+ * Capped at maxWait (30 mins)
+ * @param baseWaitTime - Minimum wait time (default 10 mins)
  * @param demandScore - Current demand score
  * @returns Estimated wait time in minutes
  */
 export function calculateDynamicWaitTime(
-    baseWaitTime: number,
+    baseWaitTime: number = 10,
     demandScore: number
 ): number {
-    const multiplier = 1 + (demandScore / 100);
-    const dynamicWaitTime = baseWaitTime * multiplier;
+    const minWait = baseWaitTime;
+    // Allow wait time to extend based on demand, but keep it reasonable
+    // If demand is 100%, wait time will be maxWait
+    const maxWait = Math.max(minWait + 20, minWait * 2);
 
-    return Math.round(dynamicWaitTime);
+    // Calculate busy factor (0 to 1)
+    // Cap demandScore at 100 for this calculation
+    const rawFactor = Math.min(demandScore, 100) / 100;
+
+    // Use quadratic curve so low demand has less impact
+    // 20% demand -> 4% impact
+    // 50% demand -> 25% impact
+    // 80% demand -> 64% impact
+    // 100% demand -> 100% impact
+    const busyFactor = Math.pow(rawFactor, 2);
+
+    // Linear interpolation with curved factor
+    const waitTime = minWait + (maxWait - minWait) * busyFactor;
+
+    return Math.round(waitTime);
 }
 
 /**
@@ -207,4 +224,34 @@ export function generateMockDemandMetrics(
         estimatedWaitTime,
         lastUpdated: new Date()
     };
+}
+
+/**
+ * Calculate order velocity from Firebase order array
+ * @param orders - Array of orders with createdAt timestamps
+ * @param timeWindowHours - Time window to analyze (default: 0.25 hours = 15 mins)
+ * @returns Orders per hour (normalized)
+ */
+export function calculateOrderVelocityFromOrders(
+    orders: any[],
+    timeWindowHours: number = 0.25
+): number {
+    if (!orders || orders.length === 0) return 0;
+
+    const now = new Date();
+    const timeWindowMs = timeWindowHours * 60 * 60 * 1000;
+    const cutoffTime = new Date(now.getTime() - timeWindowMs);
+
+    const recentOrders = orders.filter(order => {
+        const orderTime = order.createdAt?.toDate?.() || order.createdAt;
+        if (!orderTime) return false;
+
+        const orderDate = orderTime instanceof Date ? orderTime : new Date(orderTime);
+        return orderDate >= cutoffTime;
+    });
+
+    // Return orders per hour (velocity)
+    // Formula: count / timeWindowHours
+    // Example: 5 orders in 0.25h (15m) = 20 orders/hr
+    return recentOrders.length / timeWindowHours;
 }

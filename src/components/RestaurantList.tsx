@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from 'react';
-import { Card, CardContent } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,6 +12,7 @@ import { toast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Minus, ShoppingCart, Star, Clock, MapPin, Utensils } from 'lucide-react';
 import { VegNonVegIndicator } from '@/components/ui/veg-non-veg-indicator';
+import { RestaurantCard } from '@/components/RestaurantCard';
 
 export function RestaurantList() {
   const [selectedRestaurant, setSelectedRestaurant] = useState<string | null>(null);
@@ -125,55 +125,9 @@ export function RestaurantList() {
             if (!open) setSelectedRestaurant(null);
           }}>
             <SheetTrigger asChild>
-              <motion.div
-                whileHover={{ y: -8, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)' }}
-                whileTap={{ scale: 0.98 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-              >
-                <Card
-                  className="cursor-pointer overflow-hidden group rounded-xl"
-                  onClick={() => handleRestaurantClick(restaurant.id)}
-                >
-                  <CardContent className="p-0 relative">
-                    {restaurant.discount && (
-                      <Badge className="absolute top-3 left-3 bg-red-500 z-10">
-                        {restaurant.discount}
-                      </Badge>
-                    )}
-                    {restaurant.isPopular && (
-                      <Badge className="absolute top-3 right-3 bg-yellow-500 z-10">
-                        Popular
-                      </Badge>
-                    )}
-                    <div className="relative overflow-hidden">
-                      <img
-                        src={restaurant.image}
-                        alt={restaurant.name}
-                        className="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-110"
-                      />
-                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-                        <h3 className="text-white font-semibold text-lg mb-1">{restaurant.name}</h3>
-                        <div className="flex items-center justify-between text-white">
-                          <div className="flex items-center gap-2">
-                            <span className="text-yellow-400">★</span>
-                            <span>{restaurant.rating}</span>
-                            <span>•</span>
-                            <span>{restaurant.prepTime}</span>
-                          </div>
-
-                        </div>
-                        <div className="flex gap-2 mt-2 flex-wrap">
-                          {restaurant.tags?.slice(0, 3).map((tag, index) => (
-                            <Badge key={index} variant="outline" className="text-white border-white text-xs">
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
+              <div onClick={() => handleRestaurantClick(restaurant.id)}>
+                <RestaurantCard restaurant={restaurant} />
+              </div>
             </SheetTrigger>
 
             <SheetContent side="right" className="w-full sm:max-w-md md:max-w-xl overflow-y-auto">
