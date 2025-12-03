@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 import { useAuth } from '@/context/auth-context';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -406,37 +407,64 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-warm flex items-center justify-center p-4 animate-page-enter">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8 animate-food-bounce">
-          <div className="w-16 h-16 bg-gradient-primary rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-glow">
-            <span className="text-primary-foreground font-bold text-2xl">S</span>
+    <div className="min-h-screen bg-gradient-warm flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-10 w-72 h-72 bg-peach-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-navy-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-peach-400/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+      </div>
+
+      <div className="w-full max-w-md relative z-10">
+        {/* Logo and Title */}
+        <div className="text-center mb-8 space-y-4 animate-food-bounce">
+          <div className="inline-block animate-float">
+            <div className="w-20 h-20 bg-gradient-to-br from-peach-400 to-peach-600 rounded-3xl flex items-center justify-center mx-auto shadow-2xl shadow-peach-500/50 transform hover:scale-110 transition-all duration-300">
+              <span className="text-navy-900 font-bold text-3xl drop-shadow-lg">S</span>
+            </div>
           </div>
-          <h1 className="text-3xl font-heading font-bold">Welcome to Swaadcourt</h1>
-          <p className="text-muted-foreground mt-2">Sign in to start your food journey</p>
+          <div className="space-y-2">
+            <h1 className="text-4xl font-heading font-bold text-navy-900 dark:text-white">
+              Welcome to <span className="text-transparent bg-clip-text bg-gradient-to-r from-peach-500 to-peach-600">Swaadcourt</span>
+            </h1>
+            <p className="text-navy-700 dark:text-navy-300 text-lg font-medium">Sign in to start your food journey</p>
+          </div>
         </div>
 
-        <Card className="shadow-food border-0 animate-float">
-          <CardHeader className="text-center pb-4">
-            <CardTitle>
+        {/* Main Card with Glassmorphism */}
+        <Card className="border-0 shadow-2xl backdrop-blur-sm bg-white/95 dark:bg-navy-900/95 ring-1 ring-navy-200/20 dark:ring-white/10 overflow-hidden animate-float">
+          {/* Gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-br from-peach-500/5 via-transparent to-navy-500/5 pointer-events-none"></div>
+
+          <CardHeader className="text-center pb-6 pt-8 relative">
+            <CardTitle className="text-2xl font-bold text-navy-900 dark:text-white">
               {authMode === 'login' ? 'Sign In' : 'Create Account'}
             </CardTitle>
           </CardHeader>
 
-          <CardContent>
+          <CardContent className="relative">
             {/* User Type Tabs */}
             <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as UserRole)} className="w-full mb-6">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="customer" className="text-xs flex items-center gap-1">
-                  <User className="h-3 w-3" />
+              <TabsList className="grid w-full grid-cols-3 bg-navy-100 dark:bg-navy-800/50 p-1 backdrop-blur-sm">
+                <TabsTrigger
+                  value="customer"
+                  className="text-sm flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-peach-500 data-[state=active]:to-peach-600 data-[state=active]:text-navy-900 data-[state=active]:shadow-lg transition-all duration-300 text-navy-600 dark:text-navy-300 hover:text-navy-900 dark:hover:text-white"
+                >
+                  <User className="h-4 w-4" />
                   Customer
                 </TabsTrigger>
-                <TabsTrigger value="vendor" className="text-xs flex items-center gap-1">
-                  <Store className="h-3 w-3" />
+                <TabsTrigger
+                  value="vendor"
+                  className="text-sm flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-peach-500 data-[state=active]:to-peach-600 data-[state=active]:text-navy-900 data-[state=active]:shadow-lg transition-all duration-300 text-navy-600 dark:text-navy-300 hover:text-navy-900 dark:hover:text-white"
+                >
+                  <Store className="h-4 w-4" />
                   Vendor
                 </TabsTrigger>
-                <TabsTrigger value="admin" className="text-xs flex items-center gap-1">
-                  <Shield className="h-3 w-3" />
+                <TabsTrigger
+                  value="admin"
+                  className="text-sm flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-peach-500 data-[state=active]:to-peach-600 data-[state=active]:text-navy-900 data-[state=active]:shadow-lg transition-all duration-300 text-navy-600 dark:text-navy-300 hover:text-navy-900 dark:hover:text-white"
+                >
+                  <Shield className="h-4 w-4" />
                   Admin
                 </TabsTrigger>
               </TabsList>
@@ -450,26 +478,36 @@ export default function Login() {
                     </p>
                   </div>
                 ) : (
-                  <div className="mb-4">
-                    <div className="flex gap-2">
+                  <div className="mb-6">
+                    <div className="flex gap-2 p-1 bg-navy-100 dark:bg-navy-800/30 rounded-lg">
                       <Button
                         type="button"
-                        variant={customerLoginMethod === 'phone' ? 'food' : 'outline'}
+                        variant="ghost"
                         size="sm"
                         onClick={() => setCustomerLoginMethod('phone')}
-                        className="flex-1"
+                        className={cn(
+                          "flex-1 h-10 transition-all duration-300",
+                          customerLoginMethod === 'phone'
+                            ? "bg-gradient-to-r from-peach-500 to-peach-600 text-navy-900 shadow-lg hover:from-peach-600 hover:to-peach-700"
+                            : "text-navy-600 dark:text-navy-300 hover:text-navy-900 dark:hover:text-white hover:bg-navy-200 dark:hover:bg-navy-700/50"
+                        )}
                       >
-                        <Phone className="h-4 w-4 mr-1" />
+                        <Phone className="h-4 w-4 mr-2" />
                         Phone
                       </Button>
                       <Button
                         type="button"
-                        variant={customerLoginMethod === 'email' ? 'food' : 'outline'}
+                        variant="ghost"
                         size="sm"
                         onClick={() => setCustomerLoginMethod('email')}
-                        className="flex-1"
+                        className={cn(
+                          "flex-1 h-10 transition-all duration-300",
+                          customerLoginMethod === 'email'
+                            ? "bg-gradient-to-r from-peach-500 to-peach-600 text-navy-900 shadow-lg hover:from-peach-600 hover:to-peach-700"
+                            : "text-navy-600 dark:text-navy-300 hover:text-navy-900 dark:hover:text-white hover:bg-navy-200 dark:hover:bg-navy-700/50"
+                        )}
                       >
-                        <Mail className="h-4 w-4 mr-1" />
+                        <Mail className="h-4 w-4 mr-2" />
                         Email
                       </Button>
                     </div>
@@ -478,44 +516,42 @@ export default function Login() {
 
                 {customerLoginMethod === 'phone' && phoneAuthAvailable ? (
                   loginStep === 'phone-input' ? (
-                    <div className="space-y-4">
+                    <div className="space-y-5">
                       <div className="space-y-2">
-                        <Label htmlFor="phone">Phone Number</Label>
-                        <div className="relative">
+                        <Label htmlFor="phone" className="text-navy-900 dark:text-navy-200 font-medium">Phone Number</Label>
+                        <div className="relative group">
                           <Input
                             id="phone"
                             type="tel"
                             placeholder="Enter your phone number"
                             value={phoneNumber}
                             onChange={(e) => setPhoneNumber(e.target.value)}
-                            className="pl-10 transition-all duration-300 focus:shadow-warm"
+                            className="pl-11 h-12 bg-white dark:bg-navy-800/50 border-navy-200 dark:border-navy-700 text-navy-900 dark:text-white placeholder:text-navy-400 dark:placeholder:text-navy-500 focus:border-peach-500 focus:ring-2 focus:ring-peach-500/20 transition-all duration-300"
                           />
-                          <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-navy-400 dark:text-navy-500 group-focus-within:text-peach-500 transition-colors" />
                         </div>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-navy-600 dark:text-navy-400">
                           We'll send you a verification code
                         </p>
                       </div>
 
                       {authMode === 'signup' && (
                         <div className="space-y-2">
-                          <Label htmlFor="customer-name">Full Name</Label>
+                          <Label htmlFor="customer-name" className="text-navy-900 dark:text-navy-200 font-medium">Full Name</Label>
                           <Input
                             id="customer-name"
                             type="text"
                             placeholder="Enter your full name"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            className="transition-all duration-300 focus:shadow-warm"
+                            className="h-12 bg-white dark:bg-navy-800/50 border-navy-200 dark:border-navy-700 text-navy-900 dark:text-white placeholder:text-navy-400 dark:placeholder:text-navy-500 focus:border-peach-500 focus:ring-2 focus:ring-peach-500/20 transition-all duration-300"
                           />
                         </div>
                       )}
 
                       <Button
                         onClick={handleSendOTP}
-                        variant="food"
-                        size="lg"
-                        className="w-full ripple-effect"
+                        className="w-full h-12 bg-gradient-to-r from-peach-500 to-peach-600 hover:from-peach-600 hover:to-peach-700 text-navy-900 font-semibold shadow-lg shadow-peach-500/30 transition-all duration-300 transform hover:scale-[1.02]"
                         disabled={isLoading}
                       >
                         Send OTP
@@ -592,53 +628,53 @@ export default function Login() {
                   <form onSubmit={handleCustomerEmailAuth} className="space-y-4">
                     {authMode === 'signup' && (
                       <div className="space-y-2">
-                        <Label htmlFor="customer-email-name">Full Name</Label>
+                        <Label htmlFor="customer-email-name" className="text-navy-900 dark:text-navy-200 font-medium">Full Name</Label>
                         <Input
                           id="customer-email-name"
                           type="text"
                           placeholder="Enter your full name"
                           value={name}
                           onChange={(e) => setName(e.target.value)}
-                          className="transition-all duration-300 focus:shadow-warm"
+                          className="h-12 bg-white dark:bg-navy-800/50 border-navy-200 dark:border-navy-700 text-navy-900 dark:text-white placeholder:text-navy-400 dark:placeholder:text-navy-500 focus:border-peach-500 focus:ring-2 focus:ring-peach-500/20 transition-all duration-300"
                           required
                         />
                       </div>
                     )}
 
                     <div className="space-y-2">
-                      <Label htmlFor="customer-email">Email Address</Label>
-                      <div className="relative">
+                      <Label htmlFor="customer-email" className="text-navy-900 dark:text-navy-200 font-medium">Email Address</Label>
+                      <div className="relative group">
                         <Input
                           id="customer-email"
                           type="email"
                           placeholder="Enter your email"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          className="pl-10 transition-all duration-300 focus:shadow-warm"
+                          className="pl-11 h-12 bg-white dark:bg-navy-800/50 border-navy-200 dark:border-navy-700 text-navy-900 dark:text-white placeholder:text-navy-400 dark:placeholder:text-navy-500 focus:border-peach-500 focus:ring-2 focus:ring-peach-500/20 transition-all duration-300"
                           required
                         />
-                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-navy-400 dark:text-navy-500 group-focus-within:text-peach-500 transition-colors" />
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="customer-password">Password</Label>
-                      <div className="relative">
+                      <Label htmlFor="customer-password" className="text-navy-900 dark:text-navy-200 font-medium">Password</Label>
+                      <div className="relative group">
                         <Input
                           id="customer-password"
                           type={showPassword ? 'text' : 'password'}
                           placeholder="Enter your password"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
-                          className="pl-10 pr-10 transition-all duration-300 focus:shadow-warm"
+                          className="pl-11 pr-11 h-12 bg-white dark:bg-navy-800/50 border-navy-200 dark:border-navy-700 text-navy-900 dark:text-white placeholder:text-navy-400 dark:placeholder:text-navy-500 focus:border-peach-500 focus:ring-2 focus:ring-peach-500/20 transition-all duration-300"
                           required
                         />
-                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-navy-400 dark:text-navy-500 group-focus-within:text-peach-500 transition-colors" />
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon-sm"
-                          className="absolute right-2 top-1/2 transform -translate-y-1/2"
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 text-navy-400 dark:text-navy-500 hover:text-navy-900 dark:hover:text-white"
                           onClick={() => setShowPassword(!showPassword)}
                         >
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -648,13 +684,13 @@ export default function Login() {
 
                     <Button
                       type="submit"
-                      variant="food"
-                      size="lg"
-                      className="w-full ripple-effect"
+                      className="w-full h-12 bg-gradient-to-r from-peach-500 to-peach-600 hover:from-peach-600 hover:to-peach-700 text-navy-900 font-semibold shadow-lg shadow-peach-500/30 transition-all duration-300 transform hover:scale-[1.02]"
                       disabled={isLoading}
                     >
                       {authMode === 'login' ? 'Sign In' : 'Create Account'}
                     </Button>
+
+                    <GoogleSignInButton onSuccess={handleSuccessfulLogin} />
                   </form>
                 )}
               </TabsContent>

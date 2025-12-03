@@ -381,6 +381,12 @@ export async function updateOrderStatus(orderId: string, status: VendorOrderStat
 // Helper function to generate OTP for existing ready orders without OTP
 export async function generateOTPForReadyOrder(orderId: string): Promise<string> {
     try {
+        const { auth } = await import('./config');
+
+        if (!auth.currentUser) {
+            throw new Error('User must be logged in to generate OTP');
+        }
+
         const orderRef = doc(db, 'orders', orderId);
         const orderSnap = await getDoc(orderRef);
 
@@ -390,16 +396,33 @@ export async function generateOTPForReadyOrder(orderId: string): Promise<string>
 
         const orderData = orderSnap.data();
 
+        // Verify ownership
+        if (orderData.userId !== auth.currentUser.uid) {
+            console.error('Permission denied: User is not the owner of this order', {
+                orderUserId: orderData.userId,
+                currentUserId: auth.currentUser.uid
+            });
+            throw new Error('You do not have permission to generate OTP for this order');
+        }
+
         // Generate new OTP for ready orders (even if one already exists - for regeneration)
         if (orderData.vendorStatus === 'ready') {
             const { generatePickupOTP, createPickupOTPData } = await import('./pickupOtp');
             const otp = generatePickupOTP();
             const otpData = await createPickupOTPData(otp);
 
-            await updateDoc(orderRef, {
-                pickupOTP: otpData,
-                updatedAt: Timestamp.now()
-            });
+            try {
+                await updateDoc(orderRef, {
+                    pickupOTP: otpData,
+                    updatedAt: Timestamp.now()
+                });
+            } catch (updateError: any) {
+                console.error('Error updating main order document:', updateError);
+                if (updateError.code === 'permission-denied') {
+                    throw new Error('Permission denied updating order. Please contact support.');
+                }
+                throw updateError;
+            }
 
             // Also update user subcollection if it exists
             if (orderData.userId) {
@@ -407,7 +430,7 @@ export async function generateOTPForReadyOrder(orderId: string): Promise<string>
                 await updateDoc(userOrdersRef, {
                     pickupOTP: otpData,
                     updatedAt: Timestamp.now()
-                }).catch(() => { });
+                }).catch((e) => console.warn('Failed to update user subcollection:', e));
             }
 
             console.log('🔐 Generated OTP for ready order:', orderId, 'OTP:', otp);

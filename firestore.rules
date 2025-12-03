@@ -59,36 +59,27 @@ service cloud.firestore {
     
     // Vendors collection
     match /vendors/{vendorId} {
-      allow read: if request.auth != null && (request.auth.uid == vendorId || isAdmin());
-      allow write: if request.auth != null && (request.auth.uid == vendorId || isAdmin());
+      // Allow if auth uid matches vendorId OR if user owns the restaurant with this ID
+      function isOwner() {
+        return request.auth.uid == vendorId || 
+               (exists(/databases/$(database)/documents/restaurants/$(vendorId)) &&
+                get(/databases/$(database)/documents/restaurants/$(vendorId)).data.vendorId == request.auth.uid);
+      }
+
+      allow read: if request.auth != null && (isOwner() || isAdmin());
+      allow write: if request.auth != null && (isOwner() || isAdmin());
       
       // Vendor menu items subcollection
       match /menuItems/{menuItemId} {
-        allow read: if request.auth != null && (request.auth.uid == vendorId || isAdmin());
-        allow write: if request.auth != null && (request.auth.uid == vendorId || isAdmin());
+        allow read: if request.auth != null && (isOwner() || isAdmin());
+        allow write: if request.auth != null && (isOwner() || isAdmin());
       }
       
       // Vendor categories subcollection
       match /categories/{categoryId} {
-        allow read: if request.auth != null && (request.auth.uid == vendorId || isAdmin());
-        allow write: if request.auth != null && (request.auth.uid == vendorId || isAdmin());
+        allow read: if request.auth != null && (isOwner() || isAdmin());
+        allow write: if request.auth != null && (isOwner() || isAdmin());
       }
-    }
-    
-    // Admins collection
-    match /admins/{adminId} {
-      allow read, write: if isAdmin();
-    }
-    
-    // Global orders collection
-    match /orders/{orderId} {
-      allow read, write: if request.auth != null;
-    }
-
-    // Payout Batches collection
-    match /payoutBatches/{batchId} {
-      allow read: if request.auth != null && (isAdmin() || isVendor());
-      allow write: if isAdmin();
     }
 
     // Vendor Notification Settings

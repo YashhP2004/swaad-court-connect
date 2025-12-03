@@ -18,12 +18,20 @@ import {
   CreditCard,
   Store,
   Users,
-  Palette,
   Upload,
-  ChefHat
+  ChefHat,
+  Package,
+  Utensils,
+  Timer,
+  Leaf,
+  AlertCircle,
+  Check,
+  Facebook,
+  Instagram,
+  Twitter
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -34,7 +42,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/auth-context';
 import {
   getVendorProfile,
@@ -81,7 +89,11 @@ interface RestaurantProfile {
     accountHolderName: string;
     bankName: string;
   };
-  maxCapacity?: number; // Kitchen capacity for demand indicators
+  maxCapacity?: number;
+  // New menu settings
+  defaultPrepTime?: number;
+  packagingType?: 'standard' | 'eco-friendly' | 'premium';
+  autoAcceptOrders?: boolean;
 }
 
 interface NotificationSettings {
@@ -99,6 +111,7 @@ export default function VendorSettings() {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const [restaurantProfile, setRestaurantProfile] = useState<RestaurantProfile>({
     id: '1',
@@ -139,7 +152,11 @@ export default function VendorSettings() {
       ifscCode: 'HDFC0001234',
       accountHolderName: 'Delicious Bites Restaurant',
       bankName: 'HDFC Bank'
-    }
+    },
+    maxCapacity: 15,
+    defaultPrepTime: 20,
+    packagingType: 'standard',
+    autoAcceptOrders: false
   });
 
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({
@@ -218,7 +235,10 @@ export default function VendorSettings() {
             accountHolderName: profileData.businessName || profileData.name,
             bankName: 'HDFC Bank'
           },
-          maxCapacity: profileData.maxCapacity || 15
+          maxCapacity: profileData.maxCapacity || 15,
+          defaultPrepTime: profileData.defaultPrepTime || 20,
+          packagingType: profileData.packagingType || 'standard',
+          autoAcceptOrders: profileData.autoAcceptOrders || false
         });
       }
 
@@ -243,6 +263,7 @@ export default function VendorSettings() {
       await updateVendorProfile(user.uid, profileToSave);
       toast.success('Restaurant profile updated successfully');
       setIsEditing(false);
+      setHasUnsavedChanges(false);
     } catch (error) {
       console.error('Error updating profile:', error);
       toast.error('Failed to update profile');
@@ -273,6 +294,7 @@ export default function VendorSettings() {
         cuisine: [...prev.cuisine, newCuisine]
       }));
       setNewCuisine('');
+      setHasUnsavedChanges(true);
     }
   };
 
@@ -281,6 +303,7 @@ export default function VendorSettings() {
       ...prev,
       cuisine: prev.cuisine.filter(c => c !== cuisine)
     }));
+    setHasUnsavedChanges(true);
   };
 
   const updateOpeningHours = (day: string, field: string, value: string | boolean) => {
@@ -294,6 +317,7 @@ export default function VendorSettings() {
         }
       }
     }));
+    setHasUnsavedChanges(true);
   };
 
   if (isLoading) {
@@ -307,156 +331,218 @@ export default function VendorSettings() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Restaurant Settings</h2>
-          <p className="text-gray-600">Manage your restaurant profile and preferences</p>
-        </div>
+      {/* Premium Header */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-orange-400 via-rose-400 to-pink-400 p-8 text-white shadow-2xl">
+        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-white rounded-full blur-3xl opacity-10"></div>
+        <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-64 h-64 bg-white rounded-full blur-3xl opacity-10"></div>
 
-        <div className="flex gap-3">
-          {isEditing && (
-            <>
+        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div className="flex items-center gap-6">
+            <div className="relative">
+              <Avatar className="w-20 h-20 border-4 border-white/20 shadow-xl">
+                <AvatarImage src={restaurantProfile.logo} alt={restaurantProfile.name} />
+                <AvatarFallback className="text-2xl bg-white/20 text-white">
+                  {restaurantProfile.name.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+              <div className={`absolute -bottom-2 -right-2 w-6 h-6 rounded-full border-4 border-white ${restaurantProfile.isActive ? 'bg-green-500' : 'bg-red-500'}`}></div>
+            </div>
+
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight mb-2">
+                {restaurantProfile.name}
+              </h1>
+              <div className="flex items-center gap-4 text-white/90">
+                <div className="flex items-center gap-1.5 bg-white/10 px-3 py-1 rounded-full backdrop-blur-sm">
+                  <span className="text-yellow-300">★</span>
+                  <span className="font-semibold">{restaurantProfile.rating.toFixed(1)}</span>
+                </div>
+                <Badge variant="secondary" className="bg-white/10 text-white border-0 hover:bg-white/20">
+                  {restaurantProfile.cuisine[0]}
+                </Badge>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            {isEditing && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditing(false);
+                    setHasUnsavedChanges(false);
+                  }}
+                  disabled={isSaving}
+                  className="bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSaveProfile}
+                  disabled={isSaving}
+                  className="bg-white text-orange-600 hover:bg-white/90 shadow-lg"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  {isSaving ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </>
+            )}
+            {!isEditing && (
               <Button
-                variant="outline"
-                onClick={() => setIsEditing(false)}
-                disabled={isSaving}
+                onClick={() => setIsEditing(true)}
+                className="bg-white text-orange-600 hover:bg-white/90 shadow-lg"
               >
-                <X className="w-4 h-4 mr-2" />
-                Cancel
+                <Edit className="w-4 h-4 mr-2" />
+                Edit Profile
               </Button>
-              <Button
-                onClick={handleSaveProfile}
-                disabled={isSaving}
-                className="gap-2"
-              >
-                <Save className="w-4 h-4" />
-                {isSaving ? 'Saving...' : 'Save Changes'}
-              </Button>
-            </>
-          )}
-          {!isEditing && (
-            <Button onClick={() => setIsEditing(true)} className="gap-2">
-              <Edit className="w-4 h-4" />
-              Edit Profile
-            </Button>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
+      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="profile">Restaurant Profile</TabsTrigger>
-          <TabsTrigger value="business">Business Settings</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
-          <TabsTrigger value="account">Account & Security</TabsTrigger>
-        </TabsList>
+        <div className="bg-white/80 backdrop-blur-md rounded-2xl p-2 shadow-sm border border-orange-100">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 bg-transparent gap-2">
+            <TabsTrigger
+              value="profile"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-rose-500 data-[state=active]:text-white rounded-xl font-medium transition-all duration-200"
+            >
+              <Store className="w-4 h-4 mr-2" />
+              Profile
+            </TabsTrigger>
+            <TabsTrigger
+              value="business"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white rounded-xl font-medium transition-all duration-200"
+            >
+              <MapPin className="w-4 h-4 mr-2" />
+              Business
+            </TabsTrigger>
+            <TabsTrigger
+              value="menu-settings"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-emerald-500 data-[state=active]:text-white rounded-xl font-medium transition-all duration-200"
+            >
+              <Utensils className="w-4 h-4 mr-2" />
+              Menu
+            </TabsTrigger>
+            <TabsTrigger
+              value="notifications"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-violet-500 data-[state=active]:text-white rounded-xl font-medium transition-all duration-200"
+            >
+              <Bell className="w-4 h-4 mr-2" />
+              Notifications
+            </TabsTrigger>
+            <TabsTrigger
+              value="account"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-gray-500 data-[state=active]:to-slate-500 data-[state=active]:text-white rounded-xl font-medium transition-all duration-200"
+            >
+              <Shield className="w-4 h-4 mr-2" />
+              Account
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
+        {/* Profile Tab */}
         <TabsContent value="profile" className="space-y-6">
-          {/* Restaurant Header */}
-          <Card className="border-0 shadow-lg">
-            <div className="relative">
+          {/* Cover Image */}
+          <Card className="border-0 shadow-lg overflow-hidden">
+            <div className="relative h-48">
               <img
                 src={restaurantProfile.coverImage}
                 alt="Restaurant Cover"
-                className="w-full h-48 object-cover rounded-t-lg"
+                className="w-full h-full object-cover"
               />
               {isEditing && (
                 <Button
                   variant="secondary"
                   size="sm"
-                  className="absolute top-4 right-4 gap-2"
+                  className="absolute top-4 right-4 gap-2 bg-white/90 hover:bg-white"
                 >
                   <Camera className="w-4 h-4" />
                   Change Cover
                 </Button>
               )}
             </div>
+          </Card>
 
-            <CardContent className="p-6">
-              <div className="flex flex-col md:flex-row gap-6">
-                <div className="relative">
-                  <Avatar className="w-24 h-24">
-                    <AvatarImage src={restaurantProfile.logo} alt={restaurantProfile.name} />
-                    <AvatarFallback className="text-2xl">
-                      {restaurantProfile.name.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
+          {/* Basic Information */}
+          <Card className="border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="w-5 h-5 text-orange-500" />
+                Restaurant Information
+              </CardTitle>
+              <CardDescription>Basic details about your restaurant</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="name">Restaurant Name</Label>
+                <Input
+                  id="name"
+                  value={restaurantProfile.name}
+                  onChange={(e) => {
+                    setRestaurantProfile(prev => ({ ...prev, name: e.target.value }));
+                    setHasUnsavedChanges(true);
+                  }}
+                  disabled={!isEditing}
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={restaurantProfile.description}
+                  onChange={(e) => {
+                    setRestaurantProfile(prev => ({ ...prev, description: e.target.value }));
+                    setHasUnsavedChanges(true);
+                  }}
+                  disabled={!isEditing}
+                  rows={3}
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <Label>Cuisine Types</Label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {restaurantProfile.cuisine.map(cuisine => (
+                    <Badge key={cuisine} variant="secondary" className="gap-1 bg-orange-100 text-orange-700 hover:bg-orange-200">
+                      {cuisine}
+                      {isEditing && (
+                        <button
+                          onClick={() => removeCuisine(cuisine)}
+                          className="ml-1 hover:text-red-500"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </Badge>
+                  ))}
                   {isEditing && (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="absolute -bottom-2 -right-2 w-8 h-8 p-0"
-                    >
-                      <Camera className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    {isEditing ? (
-                      <Input
-                        value={restaurantProfile.name}
-                        onChange={(e) => setRestaurantProfile(prev => ({ ...prev, name: e.target.value }))}
-                        className="text-xl font-bold"
-                      />
-                    ) : (
-                      <h3 className="text-2xl font-bold">{restaurantProfile.name}</h3>
-                    )}
-                    <div className="flex items-center gap-1">
-                      <span className="text-yellow-500">★</span>
-                      <span className="font-semibold">{restaurantProfile.rating}</span>
+                    <div className="flex gap-2">
+                      <Select value={newCuisine} onValueChange={setNewCuisine}>
+                        <SelectTrigger className="w-32">
+                          <SelectValue placeholder="Add cuisine" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {cuisineOptions
+                            .filter(option => !restaurantProfile.cuisine.includes(option))
+                            .map(option => (
+                              <SelectItem key={option} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <Button size="sm" onClick={addCuisine} disabled={!newCuisine}>
+                        <Plus className="w-4 h-4" />
+                      </Button>
                     </div>
-                  </div>
-
-                  {isEditing ? (
-                    <Textarea
-                      value={restaurantProfile.description}
-                      onChange={(e) => setRestaurantProfile(prev => ({ ...prev, description: e.target.value }))}
-                      rows={3}
-                      className="mb-4"
-                    />
-                  ) : (
-                    <p className="text-gray-600 mb-4">{restaurantProfile.description}</p>
                   )}
-
-                  <div className="flex flex-wrap gap-2">
-                    {restaurantProfile.cuisine.map(cuisine => (
-                      <Badge key={cuisine} variant="secondary" className="gap-1">
-                        {cuisine}
-                        {isEditing && (
-                          <button
-                            onClick={() => removeCuisine(cuisine)}
-                            className="ml-1 hover:text-red-500"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        )}
-                      </Badge>
-                    ))}
-                    {isEditing && (
-                      <div className="flex gap-2">
-                        <Select value={newCuisine} onValueChange={setNewCuisine}>
-                          <SelectTrigger className="w-32">
-                            <SelectValue placeholder="Add cuisine" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {cuisineOptions
-                              .filter(option => !restaurantProfile.cuisine.includes(option))
-                              .map(option => (
-                                <SelectItem key={option} value={option}>
-                                  {option}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                        <Button size="sm" onClick={addCuisine} disabled={!newCuisine}>
-                          <Plus className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
                 </div>
               </div>
             </CardContent>
@@ -466,7 +552,7 @@ export default function VendorSettings() {
           <Card className="border-0 shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Phone className="w-5 h-5" />
+                <Phone className="w-5 h-5 text-orange-500" />
                 Contact Information
               </CardTitle>
             </CardHeader>
@@ -477,8 +563,12 @@ export default function VendorSettings() {
                   <Input
                     id="phone"
                     value={restaurantProfile.phone}
-                    onChange={(e) => setRestaurantProfile(prev => ({ ...prev, phone: e.target.value }))}
+                    onChange={(e) => {
+                      setRestaurantProfile(prev => ({ ...prev, phone: e.target.value }));
+                      setHasUnsavedChanges(true);
+                    }}
                     disabled={!isEditing}
+                    className="mt-1"
                   />
                 </div>
                 <div>
@@ -487,8 +577,12 @@ export default function VendorSettings() {
                     id="email"
                     type="email"
                     value={restaurantProfile.email}
-                    onChange={(e) => setRestaurantProfile(prev => ({ ...prev, email: e.target.value }))}
+                    onChange={(e) => {
+                      setRestaurantProfile(prev => ({ ...prev, email: e.target.value }));
+                      setHasUnsavedChanges(true);
+                    }}
                     disabled={!isEditing}
+                    className="mt-1"
                   />
                 </div>
               </div>
@@ -498,22 +592,28 @@ export default function VendorSettings() {
                 <Input
                   id="website"
                   value={restaurantProfile.website}
-                  onChange={(e) => setRestaurantProfile(prev => ({ ...prev, website: e.target.value }))}
+                  onChange={(e) => {
+                    setRestaurantProfile(prev => ({ ...prev, website: e.target.value }));
+                    setHasUnsavedChanges(true);
+                  }}
                   disabled={!isEditing}
+                  className="mt-1"
+                  placeholder="www.yourrestaurant.com"
                 />
               </div>
 
               <div>
-                <Label htmlFor="address">Address</Label>
+                <Label htmlFor="address">Full Address</Label>
                 <Textarea
                   id="address"
                   value={`${restaurantProfile.address}, ${restaurantProfile.city}, ${restaurantProfile.state} - ${restaurantProfile.pincode}`}
                   onChange={(e) => {
-                    // Simple address parsing - in real app, use proper address components
                     setRestaurantProfile(prev => ({ ...prev, address: e.target.value }));
+                    setHasUnsavedChanges(true);
                   }}
                   disabled={!isEditing}
                   rows={2}
+                  className="mt-1"
                 />
               </div>
             </CardContent>
@@ -523,49 +623,71 @@ export default function VendorSettings() {
           <Card className="border-0 shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Globe className="w-5 h-5" />
+                <Globe className="w-5 h-5 text-orange-500" />
                 Social Media
               </CardTitle>
+              <CardDescription>Connect your social media profiles</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <Label htmlFor="facebook">Facebook</Label>
+                  <Label htmlFor="facebook" className="flex items-center gap-2">
+                    <Facebook className="w-4 h-4 text-blue-600" />
+                    Facebook
+                  </Label>
                   <Input
                     id="facebook"
                     value={restaurantProfile.socialMedia.facebook}
-                    onChange={(e) => setRestaurantProfile(prev => ({
-                      ...prev,
-                      socialMedia: { ...prev.socialMedia, facebook: e.target.value }
-                    }))}
+                    onChange={(e) => {
+                      setRestaurantProfile(prev => ({
+                        ...prev,
+                        socialMedia: { ...prev.socialMedia, facebook: e.target.value }
+                      }));
+                      setHasUnsavedChanges(true);
+                    }}
                     disabled={!isEditing}
                     placeholder="facebook.com/yourpage"
+                    className="mt-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="instagram">Instagram</Label>
+                  <Label htmlFor="instagram" className="flex items-center gap-2">
+                    <Instagram className="w-4 h-4 text-pink-600" />
+                    Instagram
+                  </Label>
                   <Input
                     id="instagram"
                     value={restaurantProfile.socialMedia.instagram}
-                    onChange={(e) => setRestaurantProfile(prev => ({
-                      ...prev,
-                      socialMedia: { ...prev.socialMedia, instagram: e.target.value }
-                    }))}
+                    onChange={(e) => {
+                      setRestaurantProfile(prev => ({
+                        ...prev,
+                        socialMedia: { ...prev.socialMedia, instagram: e.target.value }
+                      }));
+                      setHasUnsavedChanges(true);
+                    }}
                     disabled={!isEditing}
                     placeholder="@yourusername"
+                    className="mt-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="twitter">Twitter</Label>
+                  <Label htmlFor="twitter" className="flex items-center gap-2">
+                    <Twitter className="w-4 h-4 text-blue-400" />
+                    Twitter
+                  </Label>
                   <Input
                     id="twitter"
                     value={restaurantProfile.socialMedia.twitter}
-                    onChange={(e) => setRestaurantProfile(prev => ({
-                      ...prev,
-                      socialMedia: { ...prev.socialMedia, twitter: e.target.value }
-                    }))}
+                    onChange={(e) => {
+                      setRestaurantProfile(prev => ({
+                        ...prev,
+                        socialMedia: { ...prev.socialMedia, twitter: e.target.value }
+                      }));
+                      setHasUnsavedChanges(true);
+                    }}
                     disabled={!isEditing}
                     placeholder="@yourusername"
+                    className="mt-1"
                   />
                 </div>
               </div>
@@ -573,75 +695,22 @@ export default function VendorSettings() {
           </Card>
         </TabsContent>
 
+        {/* Business Settings Tab */}
         <TabsContent value="business" className="space-y-6">
-          {/* Delivery Settings */}
-          <Card className="border-0 shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="w-5 h-5" />
-                Delivery Settings
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="deliveryRadius">Delivery Radius (km)</Label>
-                  <Input
-                    id="deliveryRadius"
-                    type="number"
-                    value={restaurantProfile.deliveryRadius}
-                    onChange={(e) => setRestaurantProfile(prev => ({ ...prev, deliveryRadius: Number(e.target.value) }))}
-                    disabled={!isEditing}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="minimumOrder">Minimum Order (₹)</Label>
-                  <Input
-                    id="minimumOrder"
-                    type="number"
-                    value={restaurantProfile.minimumOrder}
-                    onChange={(e) => setRestaurantProfile(prev => ({ ...prev, minimumOrder: Number(e.target.value) }))}
-                    disabled={!isEditing}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="deliveryFee">Delivery Fee (₹)</Label>
-                  <Input
-                    id="deliveryFee"
-                    type="number"
-                    value={restaurantProfile.deliveryFee}
-                    onChange={(e) => setRestaurantProfile(prev => ({ ...prev, deliveryFee: Number(e.target.value) }))}
-                    disabled={!isEditing}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="deliveryTime">Estimated Delivery Time</Label>
-                <Input
-                  id="deliveryTime"
-                  value={restaurantProfile.estimatedDeliveryTime}
-                  onChange={(e) => setRestaurantProfile(prev => ({ ...prev, estimatedDeliveryTime: e.target.value }))}
-                  disabled={!isEditing}
-                  placeholder="e.g., 30-45 mins"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Opening Hours */}
           <Card className="border-0 shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Clock className="w-5 h-5" />
+                <Clock className="w-5 h-5 text-blue-500" />
                 Opening Hours
               </CardTitle>
+              <CardDescription>Set your restaurant operating hours</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {days.map(day => (
-                <div key={day} className="flex items-center gap-4">
-                  <div className="w-24">
-                    <span className="font-medium capitalize">{day}</span>
+                <div key={day} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                  <div className="w-28">
+                    <span className="font-medium capitalize text-gray-700">{day}</span>
                   </div>
 
                   <Switch
@@ -651,7 +720,7 @@ export default function VendorSettings() {
                   />
 
                   {restaurantProfile.openingHours?.[day]?.isOpen ? (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-1">
                       <Input
                         type="time"
                         value={restaurantProfile.openingHours[day].open}
@@ -659,7 +728,7 @@ export default function VendorSettings() {
                         disabled={!isEditing}
                         className="w-32"
                       />
-                      <span>to</span>
+                      <span className="text-gray-500">to</span>
                       <Input
                         type="time"
                         value={restaurantProfile.openingHours[day].close}
@@ -669,7 +738,7 @@ export default function VendorSettings() {
                       />
                     </div>
                   ) : (
-                    <span className="text-gray-500">Closed</span>
+                    <span className="text-gray-500 flex-1">Closed</span>
                   )}
                 </div>
               ))}
@@ -680,39 +749,42 @@ export default function VendorSettings() {
           <Card className="border-0 shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Store className="w-5 h-5" />
+                <Store className="w-5 h-5 text-blue-500" />
                 Restaurant Status
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-orange-50 to-rose-50 rounded-lg border border-orange-100">
                 <div>
-                  <h4 className="font-semibold">Restaurant Active Status</h4>
+                  <h4 className="font-semibold text-gray-900">Currently {restaurantProfile.isActive ? 'Open' : 'Closed'}</h4>
                   <p className="text-sm text-gray-600">
                     {restaurantProfile.isActive
-                      ? 'Your restaurant is currently accepting orders'
+                      ? 'Your restaurant is accepting orders'
                       : 'Your restaurant is temporarily closed'
                     }
                   </p>
                 </div>
                 <Switch
                   checked={restaurantProfile.isActive}
-                  onCheckedChange={(checked) => setRestaurantProfile(prev => ({ ...prev, isActive: checked }))}
+                  onCheckedChange={(checked) => {
+                    setRestaurantProfile(prev => ({ ...prev, isActive: checked }));
+                    setHasUnsavedChanges(true);
+                  }}
                   disabled={!isEditing}
+                  className="data-[state=checked]:bg-green-500"
                 />
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
 
-        <TabsContent value="business" className="space-y-6">
-          {/* Kitchen Capacity Settings */}
+          {/* Kitchen Capacity */}
           <Card className="border-0 shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <ChefHat className="w-5 h-5" />
-                Kitchen Capacity Settings
+                <ChefHat className="w-5 h-5 text-blue-500" />
+                Kitchen Capacity
               </CardTitle>
+              <CardDescription>Manage your kitchen's order handling capacity</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -723,129 +795,184 @@ export default function VendorSettings() {
                   min="5"
                   max="50"
                   value={restaurantProfile.maxCapacity || 15}
-                  onChange={(e) => setRestaurantProfile(prev => ({ ...prev, maxCapacity: Number(e.target.value) }))}
+                  onChange={(e) => {
+                    setRestaurantProfile(prev => ({ ...prev, maxCapacity: Number(e.target.value) }));
+                    setHasUnsavedChanges(true);
+                  }}
                   disabled={!isEditing}
                   placeholder="15"
+                  className="mt-1"
                 />
                 <p className="text-sm text-gray-600 mt-2">
                   Set the maximum number of orders your kitchen can handle simultaneously.
-                  This helps calculate demand levels and wait times for customers.
                 </p>
               </div>
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="font-semibold text-blue-900 mb-2">💡 How This Works</h4>
+                <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4" />
+                  How This Works
+                </h4>
                 <ul className="text-sm text-blue-800 space-y-1">
                   <li>• Helps customers see accurate wait times</li>
-                  <li>• Shows demand indicators (🟢🟡🟠🔴) on your restaurant card</li>
-                  <li>• Alerts you when kitchen capacity reaches 80%+</li>
-                  <li>• Recommended: 10-20 for small kitchens, 20-30 for medium, 30+ for large</li>
+                  <li>• Shows demand indicators on your restaurant card</li>
+                  <li>• Alerts you when capacity reaches 80%+</li>
+                  <li>• Recommended: 10-20 for small, 20-30 for medium, 30+ for large kitchens</li>
                 </ul>
               </div>
-
-              {restaurantProfile.maxCapacity && (
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h4 className="font-semibold mb-2">Current Capacity: {restaurantProfile.maxCapacity} orders</h4>
-                  <div className="space-y-2 text-sm text-gray-700">
-                    <div className="flex justify-between">
-                      <span>🟢 Low Demand (0-24%):</span>
-                      <span>0-{Math.floor(restaurantProfile.maxCapacity * 0.24)} orders</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>🟡 Medium Demand (25-49%):</span>
-                      <span>{Math.floor(restaurantProfile.maxCapacity * 0.25)}-{Math.floor(restaurantProfile.maxCapacity * 0.49)} orders</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>🟠 High Demand (50-74%):</span>
-                      <span>{Math.floor(restaurantProfile.maxCapacity * 0.50)}-{Math.floor(restaurantProfile.maxCapacity * 0.74)} orders</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>🔴 Very High Demand (75%+):</span>
-                      <span>{Math.floor(restaurantProfile.maxCapacity * 0.75)}+ orders</span>
-                    </div>
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
         </TabsContent>
 
+        {/* Menu Settings Tab (NEW) */}
+        <TabsContent value="menu-settings" className="space-y-6">
+          {/* Preparation Settings */}
+          <Card className="border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Timer className="w-5 h-5 text-green-500" />
+                Preparation Settings
+              </CardTitle>
+              <CardDescription>Default settings for menu items</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="defaultPrepTime">Default Preparation Time (minutes)</Label>
+                <Input
+                  id="defaultPrepTime"
+                  type="number"
+                  min="5"
+                  max="120"
+                  value={restaurantProfile.defaultPrepTime || 20}
+                  onChange={(e) => {
+                    setRestaurantProfile(prev => ({ ...prev, defaultPrepTime: Number(e.target.value) }));
+                    setHasUnsavedChanges(true);
+                  }}
+                  disabled={!isEditing}
+                  className="mt-1"
+                />
+                <p className="text-sm text-gray-600 mt-2">
+                  This will be used as the default prep time for new menu items
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Packaging Options */}
+          <Card className="border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="w-5 h-5 text-green-500" />
+                Packaging Options
+              </CardTitle>
+              <CardDescription>Choose your default packaging type</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[
+                  { value: 'standard', label: 'Standard', desc: 'Regular packaging' },
+                  { value: 'eco-friendly', label: 'Eco-Friendly', desc: 'Biodegradable materials' },
+                  { value: 'premium', label: 'Premium', desc: 'High-quality packaging' }
+                ].map(option => (
+                  <div
+                    key={option.value}
+                    onClick={() => {
+                      if (isEditing) {
+                        setRestaurantProfile(prev => ({ ...prev, packagingType: option.value as any }));
+                        setHasUnsavedChanges(true);
+                      }
+                    }}
+                    className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${restaurantProfile.packagingType === option.value
+                      ? 'border-green-500 bg-green-50'
+                      : 'border-gray-200 hover:border-green-300'
+                      } ${!isEditing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-semibold text-gray-900">{option.label}</h4>
+                      {restaurantProfile.packagingType === option.value && (
+                        <Check className="w-5 h-5 text-green-500" />
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600">{option.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Order Management */}
+          <Card className="border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="w-5 h-5 text-green-500" />
+                Order Management
+              </CardTitle>
+              <CardDescription>Configure how you handle incoming orders</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div>
+                  <h4 className="font-semibold text-gray-900">Auto-Accept Orders</h4>
+                  <p className="text-sm text-gray-600">
+                    Automatically accept orders without manual confirmation
+                  </p>
+                </div>
+                <Switch
+                  checked={restaurantProfile.autoAcceptOrders || false}
+                  onCheckedChange={(checked) => {
+                    setRestaurantProfile(prev => ({ ...prev, autoAcceptOrders: checked }));
+                    setHasUnsavedChanges(true);
+                  }}
+                  disabled={!isEditing}
+                />
+              </div>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <h4 className="font-semibold text-yellow-900 mb-2 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4" />
+                  Note
+                </h4>
+                <p className="text-sm text-yellow-800">
+                  When auto-accept is enabled, orders will be automatically moved to "Preparing" status.
+                  Make sure your kitchen can handle the incoming volume.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Notifications Tab */}
         <TabsContent value="notifications" className="space-y-6">
           <Card className="border-0 shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Bell className="w-5 h-5" />
+                <Bell className="w-5 h-5 text-purple-500" />
                 Notification Preferences
               </CardTitle>
+              <CardDescription>Manage how you receive notifications</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
+              {[
+                { key: 'orderNotifications', label: 'Order Notifications', desc: 'Get notified about new orders and order updates' },
+                { key: 'paymentNotifications', label: 'Payment Notifications', desc: 'Receive updates about payments and payouts' },
+                { key: 'reviewNotifications', label: 'Review Notifications', desc: 'Get notified when customers leave reviews' },
+                { key: 'pushNotifications', label: 'Push Notifications', desc: 'Receive push notifications on your device' },
+                { key: 'smsNotifications', label: 'SMS Notifications', desc: 'Receive important updates via SMS' },
+                { key: 'promotionalEmails', label: 'Promotional Emails', desc: 'Receive marketing and promotional emails' }
+              ].map(setting => (
+                <div key={setting.key} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                   <div>
-                    <h4 className="font-semibold">Order Notifications</h4>
-                    <p className="text-sm text-gray-600">Get notified about new orders and order updates</p>
+                    <h4 className="font-semibold text-gray-900">{setting.label}</h4>
+                    <p className="text-sm text-gray-600">{setting.desc}</p>
                   </div>
                   <Switch
-                    checked={notificationSettings.orderNotifications}
-                    onCheckedChange={(checked) => setNotificationSettings(prev => ({ ...prev, orderNotifications: checked }))}
+                    checked={notificationSettings[setting.key as keyof NotificationSettings]}
+                    onCheckedChange={(checked) => setNotificationSettings(prev => ({ ...prev, [setting.key]: checked }))}
                   />
                 </div>
+              ))}
 
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-semibold">Payment Notifications</h4>
-                    <p className="text-sm text-gray-600">Receive updates about payments and payouts</p>
-                  </div>
-                  <Switch
-                    checked={notificationSettings.paymentNotifications}
-                    onCheckedChange={(checked) => setNotificationSettings(prev => ({ ...prev, paymentNotifications: checked }))}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-semibold">Review Notifications</h4>
-                    <p className="text-sm text-gray-600">Get notified when customers leave reviews</p>
-                  </div>
-                  <Switch
-                    checked={notificationSettings.reviewNotifications}
-                    onCheckedChange={(checked) => setNotificationSettings(prev => ({ ...prev, reviewNotifications: checked }))}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-semibold">SMS Notifications</h4>
-                    <p className="text-sm text-gray-600">Receive important updates via SMS</p>
-                  </div>
-                  <Switch
-                    checked={notificationSettings.smsNotifications}
-                    onCheckedChange={(checked) => setNotificationSettings(prev => ({ ...prev, smsNotifications: checked }))}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-semibold">Push Notifications</h4>
-                    <p className="text-sm text-gray-600">Enable browser push notifications</p>
-                  </div>
-                  <Switch
-                    checked={notificationSettings.pushNotifications}
-                    onCheckedChange={(checked) => setNotificationSettings(prev => ({ ...prev, pushNotifications: checked }))}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-semibold">Promotional Emails</h4>
-                    <p className="text-sm text-gray-600">Receive marketing and promotional content</p>
-                  </div>
-                  <Switch
-                    checked={notificationSettings.promotionalEmails}
-                    onCheckedChange={(checked) => setNotificationSettings(prev => ({ ...prev, promotionalEmails: checked }))}
-                  />
-                </div>
-              </div>
+              <Separator />
 
               <Button onClick={handleSaveNotifications} disabled={isSaving} className="w-full">
                 <Save className="w-4 h-4 mr-2" />
@@ -855,93 +982,86 @@ export default function VendorSettings() {
           </Card>
         </TabsContent>
 
+        {/* Account & Security Tab */}
         <TabsContent value="account" className="space-y-6">
           {/* Bank Details */}
           <Card className="border-0 shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <CreditCard className="w-5 h-5" />
-                Bank Account Details
+                <CreditCard className="w-5 h-5 text-gray-500" />
+                Bank Details
               </CardTitle>
+              <CardDescription>Your payout account information</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="accountHolder">Account Holder Name</Label>
-                  <Input
-                    id="accountHolder"
-                    value={restaurantProfile.bankDetails.accountHolderName}
-                    disabled
-                  />
+                  <Label>Account Holder Name</Label>
+                  <Input value={restaurantProfile.bankDetails.accountHolderName} disabled className="mt-1" />
                 </div>
                 <div>
-                  <Label htmlFor="bankName">Bank Name</Label>
-                  <Input
-                    id="bankName"
-                    value={restaurantProfile.bankDetails.bankName}
-                    disabled
-                  />
+                  <Label>Bank Name</Label>
+                  <Input value={restaurantProfile.bankDetails.bankName} disabled className="mt-1" />
+                </div>
+                <div>
+                  <Label>Account Number</Label>
+                  <Input value={restaurantProfile.bankDetails.accountNumber} disabled className="mt-1" />
+                </div>
+                <div>
+                  <Label>IFSC Code</Label>
+                  <Input value={restaurantProfile.bankDetails.ifscCode} disabled className="mt-1" />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="accountNumber">Account Number</Label>
-                  <Input
-                    id="accountNumber"
-                    value={restaurantProfile.bankDetails.accountNumber}
-                    disabled
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="ifscCode">IFSC Code</Label>
-                  <Input
-                    id="ifscCode"
-                    value={restaurantProfile.bankDetails.ifscCode}
-                    disabled
-                  />
-                </div>
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <p className="text-sm text-gray-600">
+                  To update your bank details, please contact support for security verification.
+                </p>
               </div>
-
-              <p className="text-sm text-gray-600">
-                Contact support to update your bank account details for security reasons.
-              </p>
             </CardContent>
           </Card>
 
-          {/* Security Settings */}
+          {/* Security */}
           <Card className="border-0 shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Shield className="w-5 h-5" />
-                Security Settings
+                <Shield className="w-5 h-5 text-gray-500" />
+                Security
               </CardTitle>
+              <CardDescription>Manage your account security settings</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <Button variant="outline" className="w-full justify-start">
+                <Shield className="w-4 h-4 mr-2" />
                 Change Password
               </Button>
-
               <Button variant="outline" className="w-full justify-start">
-                Enable Two-Factor Authentication
+                <Users className="w-4 h-4 mr-2" />
+                Two-Factor Authentication
               </Button>
-
-              <Button variant="outline" className="w-full justify-start">
-                Download Account Data
+              <Button variant="outline" className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50">
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Account
               </Button>
-
-              <Separator />
-
-              <div className="pt-4">
-                <h4 className="font-semibold text-red-600 mb-2">Danger Zone</h4>
-                <Button variant="destructive" className="w-full">
-                  Deactivate Account
-                </Button>
-              </div>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Unsaved Changes Warning */}
+      <AnimatePresence>
+        {hasUnsavedChanges && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-6 right-6 bg-orange-500 text-white px-6 py-3 rounded-lg shadow-xl flex items-center gap-3"
+          >
+            <AlertCircle className="w-5 h-5" />
+            <span className="font-medium">You have unsaved changes</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

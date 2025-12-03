@@ -3,9 +3,14 @@ import {
     ConfirmationResult,
     User as FirebaseUser,
     signInWithEmailAndPassword,
-    createUserWithEmailAndPassword
+    createUserWithEmailAndPassword,
+    signInWithPopup,
+    GoogleAuthProvider,
+    signInWithRedirect,
+    getRedirectResult
 } from 'firebase/auth';
-import { auth, getRecaptchaVerifier, clearRecaptchaVerifier } from './config';
+import { auth, getRecaptchaVerifier, clearRecaptchaVerifier, db } from './config';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 
 // Rate limiting storage
 const RATE_LIMIT_KEY = 'phone_auth_attempts';
@@ -239,3 +244,125 @@ export function getRemainingAttempts(phoneNumber: string): number {
 
     return Math.max(0, MAX_ATTEMPTS_PER_HOUR - data.attempts);
 }
+
+// Google Sign-In Functions
+
+// Helper function to create or update user profile in Firestore
+async function createOrUpdateUserProfile(user: FirebaseUser) {
+    const userRef = doc(db, 'users', user.uid);
+    const userSnap = await getDoc(userRef);
+
+    const userData = {
+        uid: user.uid,
+        email: user.email,
+        name: user.displayName || '',
+        phone: user.phoneNumber || '',
+        avatar: user.photoURL || '',
+        role: 'customer',
+        provider: 'google',
+        updatedAt: serverTimestamp()
+    };
+
+    if (!userSnap.exists()) {
+        // New user - create profile
+        await setDoc(userRef, {
+            ...userData,
+            createdAt: serverTimestamp(),
+            addresses: [],
+            favorites: []
+        });
+    } else {
+        // Existing user - update profile
+        await setDoc(userRef, userData, { merge: true });
+    }
+}
+
+// Google Sign-In with Popup (Recommended for Desktop)
+export async function signInWithGoogle() {
+    try {
+        const provider = new GoogleAuthProvider();
+
+        // Request additional scopes
+        provider.addScope('profile');
+        provider.addScope('email');
+
+        // Set custom parameters
+        provider.setCustomParameters({
+            prompt: 'select_account' // Forces account selection
+        });
+
+        const result = await signInWithPopup(auth, provider);
+
+        // Get user info
+        const user = result.user;
+        const credential = GoogleAuthProvider.credentialFromResult(result);
+        const token = credential?.accessToken;
+
+        // Create/Update user profile in Firestore
+        await createOrUpdateUserProfile(user);
+
+        return {
+            user,
+            token,
+            isNewUser: (result as any)._tokenResponse?.isNewUser || false
+        };
+    } catch (error: any) {
+        console.error('Google Sign-In Error:', error);
+
+        // Handle specific errors
+        if (error.code === 'auth/popup-closed-by-user') {
+            throw new Error('Sign-in cancelled. Please try again.');
+        } else if (error.code === 'auth/popup-blocked') {
+            throw new Error('Pop-up blocked. Please allow pop-ups for this site.');
+        } else if (error.code === 'auth/account-exists-with-different-credential') {
+            throw new Error('An account already exists with the same email. Please sign in using your original method.');
+        } else if (error.code === 'auth/cancelled-popup-request') {
+            // User closed popup, silently fail
+            throw new Error('Sign-in cancelled.');
+        }
+
+        throw new Error(error.message || 'Failed to sign in with Google');
+    }
+}
+
+// Google Sign-In with Redirect (Better for Mobile)
+export async function signInWithGoogleRedirect() {
+    try {
+        const provider = new GoogleAuthProvider();
+        provider.addScope('profile');
+        provider.addScope('email');
+
+        await signInWithRedirect(auth, provider);
+    } catch (error: any) {
+        console.error('Google Redirect Error:', error);
+        throw new Error(error.message || 'Failed to initiate Google sign-in');
+    }
+}
+
+// Handle redirect result (call this on app load)
+export async function handleGoogleRedirectResult() {
+    try {
+        const result = await getRedirectResult(auth);
+
+        if (result) {
+            const user = result.user;
+            await createOrUpdateUserProfile(user);
+
+            return {
+                user,
+                isNewUser: (result as any)._tokenResponse?.isNewUser || false
+            };
+        }
+
+        return null;
+    } catch (error: any) {
+        console.error('Redirect Result Error:', error);
+
+        if (error.code === 'auth/account-exists-with-different-credential') {
+            throw new Error('An account already exists with the same email. Please sign in using your original method.');
+        }
+
+        throw new Error(error.message || 'Failed to complete Google sign-in');
+    }
+}
+

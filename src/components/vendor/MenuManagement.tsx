@@ -74,6 +74,7 @@ export default function MenuManagement() {
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isLoading, setIsLoading] = useState(true);
+  const [targetVendorId, setTargetVendorId] = useState<string | null>(null);
 
   const [newItem, setNewItem] = useState<Partial<MenuItem>>({
     name: '',
@@ -94,37 +95,76 @@ export default function MenuManagement() {
   });
 
   useEffect(() => {
-    if (user?.uid) {
-      loadMenuData();
-    }
-  }, [user]);
-
-  const loadMenuData = async () => {
     if (!user?.uid) return;
 
-    setIsLoading(true);
-    try {
-      const [menuItemsData, categoriesData] = await Promise.all([
-        getVendorMenuItems(user.uid),
-        getMenuCategories(user.uid)
-      ]);
+    const initializeMenu = async () => {
+      setIsLoading(true);
+      try {
+        // Get vendor profile to find the correct ID (restaurantId or uid)
+        const { getVendorProfile } = await import('@/lib/firebase/vendor');
+        const profile = await getVendorProfile(user.uid);
+        const vendorIdToUse = profile?.restaurantId || user.uid;
+        setTargetVendorId(vendorIdToUse);
+        console.log('MenuManagement: Using vendor ID:', vendorIdToUse);
 
-      setMenuItems(menuItemsData);
-      setCategories(categoriesData.map((cat: any) => ({
-        id: cat.id,
-        name: cat.name || 'Unnamed Category',
-        description: cat.description || '',
-        isActive: cat.isActive !== undefined ? cat.isActive : true,
-        sortOrder: cat.sortOrder || 0,
-        itemCount: menuItemsData.filter((item: any) => item.category === cat.name).length
+        // Setup real-time listeners with the correct ID
+        setupRealtimeListeners(vendorIdToUse);
+      } catch (error) {
+        console.error('Error initializing menu:', error);
+        setIsLoading(false);
+      }
+    };
+
+    let unsubscribeMenuItems: () => void;
+    let unsubscribeCategories: () => void;
+
+    const setupRealtimeListeners = async (vendorId: string) => {
+      try {
+        const { getVendorMenuItemsRealtime, getVendorCategoriesRealtime } = await import('@/lib/firebase/vendor');
+
+        unsubscribeMenuItems = getVendorMenuItemsRealtime(vendorId, (items) => {
+          console.log('MenuManagement: Received menu items:', items.length);
+          setMenuItems(items as MenuItem[]);
+          setIsLoading(false);
+        });
+
+        // Use user.uid for categories (stored under vendor profile)
+        if (user?.uid) {
+          unsubscribeCategories = getVendorCategoriesRealtime(user.uid, (cats) => {
+            console.log('MenuManagement: Received categories:', cats.length);
+            setCategories(cats.map((cat: any) => ({
+              id: cat.id,
+              name: cat.name || 'Unnamed Category',
+              description: cat.description || '',
+              isActive: cat.isActive !== undefined ? cat.isActive : true,
+              sortOrder: cat.sortOrder || 0,
+              itemCount: 0 // Will be calculated in render or effect
+            })));
+          });
+        }
+      } catch (error) {
+        console.error('Error setting up realtime listeners:', error);
+        setIsLoading(false);
+      }
+    };
+
+    initializeMenu();
+
+    return () => {
+      if (unsubscribeMenuItems) unsubscribeMenuItems();
+      if (unsubscribeCategories) unsubscribeCategories();
+    };
+  }, [user]);
+
+  // Update category item counts whenever menu items or categories change
+  useEffect(() => {
+    if (categories.length > 0 && menuItems.length > 0) {
+      setCategories(prev => prev.map(cat => ({
+        ...cat,
+        itemCount: menuItems.filter(item => item.category === cat.name).length
       })));
-    } catch (error) {
-      console.error('Error loading menu data:', error);
-      toast.error('Failed to load menu data');
-    } finally {
-      setIsLoading(false);
     }
-  };
+  }, [menuItems.length, categories.length]); // Only update when lengths change to avoid loops
 
   const filteredItems = menuItems.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -134,14 +174,13 @@ export default function MenuManagement() {
   });
 
   const handleAddItem = async () => {
-    if (!newItem.name || !newItem.price || !newItem.category || !user?.uid) {
+    if (!newItem.name || !newItem.price || !newItem.category || !targetVendorId) {
       toast.error('Please fill in all required fields');
       return;
     }
 
     try {
-      const itemId = await addMenuItem(user.uid, newItem);
-      await loadMenuData();
+      const itemId = await addMenuItem(targetVendorId, newItem);
 
       setNewItem({
         name: '',
@@ -162,11 +201,10 @@ export default function MenuManagement() {
   };
 
   const handleUpdateItem = async () => {
-    if (!editingItem || !user?.uid) return;
+    if (!editingItem || !targetVendorId) return;
 
     try {
-      await updateMenuItem(user.uid, editingItem.id, editingItem);
-      await loadMenuData();
+      await updateMenuItem(targetVendorId, editingItem.id, editingItem);
       setEditingItem(null);
       toast.success('Menu item updated successfully');
     } catch (error) {
@@ -176,11 +214,10 @@ export default function MenuManagement() {
   };
 
   const handleDeleteItem = async (itemId: string) => {
-    if (!user?.uid) return;
+    if (!targetVendorId) return;
 
     try {
-      await deleteMenuItem(user.uid, itemId);
-      await loadMenuData();
+      await deleteMenuItem(targetVendorId, itemId);
       toast.success('Menu item deleted successfully');
     } catch (error) {
       console.error('Error deleting menu item:', error);
@@ -189,14 +226,13 @@ export default function MenuManagement() {
   };
 
   const toggleItemAvailability = async (itemId: string) => {
-    if (!user?.uid) return;
+    if (!targetVendorId) return;
 
     try {
       const item = menuItems.find(item => item.id === itemId);
       if (!item) return;
 
-      await updateMenuItem(user.uid, itemId, { isAvailable: !item.isAvailable });
-      await loadMenuData();
+      await updateMenuItem(targetVendorId, itemId, { isAvailable: !item.isAvailable });
       toast.success('Item availability updated');
     } catch (error) {
       console.error('Error updating availability:', error);
@@ -211,8 +247,8 @@ export default function MenuManagement() {
     }
 
     try {
+      // Use user.uid for categories
       await addMenuCategory(user.uid, newCategory);
-      await loadMenuData();
 
       setNewCategory({
         name: '',
@@ -240,7 +276,7 @@ export default function MenuManagement() {
   return (
     <div className="space-y-6">
       {/* Premium Header */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 p-8 text-white shadow-2xl">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-orange-400 via-rose-400 to-pink-400 p-8 text-white shadow-2xl">
         <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-white rounded-full blur-3xl opacity-10"></div>
         <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-64 h-64 bg-white rounded-full blur-3xl opacity-10"></div>
 
@@ -387,8 +423,13 @@ export default function MenuManagement() {
                         </div>
                       )}
                       <div className="absolute top-3 left-3 flex gap-2">
-                        <Badge variant={item.isVeg ? "default" : "secondary"} className="text-xs bg-white/90 backdrop-blur-sm">
-                          {item.isVeg ? <Leaf className="w-3 h-3 mr-1 text-green-600" /> : <ChefHat className="w-3 h-3 mr-1" />}
+                        <Badge
+                          className={`text-xs backdrop-blur-sm border-0 ${item.isVeg
+                            ? 'bg-green-100/90 text-green-700 hover:bg-green-100'
+                            : 'bg-red-100/90 text-red-700 hover:bg-red-100'
+                            }`}
+                        >
+                          {item.isVeg ? <Leaf className="w-3 h-3 mr-1" /> : <ChefHat className="w-3 h-3 mr-1" />}
                           {item.isVeg ? 'Veg' : 'Non-Veg'}
                         </Badge>
                         {!item.isAvailable && (
@@ -408,7 +449,7 @@ export default function MenuManagement() {
 
                     <CardContent className="p-5">
                       <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-bold text-lg text-gray-900 line-clamp-1">{item.name}</h3>
+                        <h3 className="font-bold text-lg text-foreground line-clamp-1">{item.name}</h3>
                         {item.rating && (
                           <div className="flex items-center gap-1 bg-green-50 px-2 py-1 rounded-full">
                             <Star className="w-3 h-3 text-green-600 fill-current" />
@@ -417,11 +458,11 @@ export default function MenuManagement() {
                         )}
                       </div>
 
-                      <p className="text-gray-600 text-sm mb-3 line-clamp-2">{item.description}</p>
+                      <p className="text-muted-foreground text-sm mb-3 line-clamp-2">{item.description}</p>
 
                       <div className="flex justify-between items-center mb-4">
                         <span className="text-2xl font-bold text-green-600">₹{item.price}</span>
-                        <div className="flex items-center gap-1 text-sm text-gray-500">
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
                           <Clock className="w-4 h-4" />
                           {item.preparationTime} min
                         </div>
@@ -466,8 +507,8 @@ export default function MenuManagement() {
                         <div className="flex-1">
                           <div className="flex justify-between items-start mb-2">
                             <div>
-                              <h3 className="font-bold text-lg text-gray-900">{item.name}</h3>
-                              <p className="text-gray-600 text-sm">{item.description}</p>
+                              <h3 className="font-bold text-lg text-foreground">{item.name}</h3>
+                              <p className="text-muted-foreground text-sm">{item.description}</p>
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="text-2xl font-bold text-green-600">₹{item.price}</span>
@@ -479,7 +520,7 @@ export default function MenuManagement() {
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-4 text-sm text-gray-500 mb-3">
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
                             <div className="flex items-center gap-1">
                               <Clock className="w-4 h-4" />
                               {item.preparationTime} min
@@ -490,7 +531,12 @@ export default function MenuManagement() {
                                 {item.rating}
                               </div>
                             )}
-                            <Badge variant={item.isVeg ? "default" : "secondary"} className="text-xs">
+                            <Badge
+                              className={`text-xs border-0 ${item.isVeg
+                                  ? 'bg-green-100 text-green-700 hover:bg-green-100'
+                                  : 'bg-red-100 text-red-700 hover:bg-red-100'
+                                }`}
+                            >
                               {item.isVeg ? 'Veg' : 'Non-Veg'}
                             </Badge>
                             {!item.isAvailable && (
@@ -616,21 +662,21 @@ export default function MenuManagement() {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center space-x-2 p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center space-x-2 p-4 bg-secondary/10 border border-border rounded-lg">
                 <Switch
                   id="isVeg"
                   checked={newItem.isVeg}
                   onCheckedChange={(checked) => setNewItem(prev => ({ ...prev, isVeg: checked }))}
                 />
-                <Label htmlFor="isVeg" className="font-semibold cursor-pointer">Vegetarian</Label>
+                <Label htmlFor="isVeg" className="font-semibold cursor-pointer text-foreground">Vegetarian</Label>
               </div>
-              <div className="flex items-center space-x-2 p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center space-x-2 p-4 bg-secondary/10 border border-border rounded-lg">
                 <Switch
                   id="isAvailable"
                   checked={newItem.isAvailable}
                   onCheckedChange={(checked) => setNewItem(prev => ({ ...prev, isAvailable: checked }))}
                 />
-                <Label htmlFor="isAvailable" className="font-semibold cursor-pointer">Available</Label>
+                <Label htmlFor="isAvailable" className="font-semibold cursor-pointer text-foreground">Available</Label>
               </div>
             </div>
 
@@ -679,13 +725,13 @@ export default function MenuManagement() {
               />
             </div>
 
-            <div className="flex items-center space-x-2 p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center space-x-2 p-4 bg-secondary/10 border border-border rounded-lg">
               <Switch
                 id="categoryActive"
                 checked={newCategory.isActive}
                 onCheckedChange={(checked) => setNewCategory(prev => ({ ...prev, isActive: checked }))}
               />
-              <Label htmlFor="categoryActive" className="font-semibold cursor-pointer">Active</Label>
+              <Label htmlFor="categoryActive" className="font-semibold cursor-pointer text-foreground">Active</Label>
             </div>
 
             <div className="flex gap-3 pt-4">
@@ -791,28 +837,28 @@ export default function MenuManagement() {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center space-x-2 p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-2 p-4 bg-secondary/10 border border-border rounded-lg">
                   <Switch
                     id="editIsVeg"
                     checked={editingItem.isVeg}
                     onCheckedChange={(checked) => setEditingItem(prev => prev ? ({ ...prev, isVeg: checked }) : null)}
                   />
-                  <Label htmlFor="editIsVeg" className="font-semibold cursor-pointer">Vegetarian</Label>
+                  <Label htmlFor="editIsVeg" className="font-semibold cursor-pointer text-foreground">Vegetarian</Label>
                 </div>
-                <div className="flex items-center space-x-2 p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-2 p-4 bg-secondary/10 border border-border rounded-lg">
                   <Switch
                     id="editIsAvailable"
                     checked={editingItem.isAvailable}
                     onCheckedChange={(checked) => setEditingItem(prev => prev ? ({ ...prev, isAvailable: checked }) : null)}
                   />
-                  <Label htmlFor="editIsAvailable" className="font-semibold cursor-pointer">Available</Label>
+                  <Label htmlFor="editIsAvailable" className="font-semibold cursor-pointer text-foreground">Available</Label>
                 </div>
               </div>
 
               <div className="flex gap-3 pt-4">
                 <Button onClick={handleUpdateItem} className="flex-1 h-12 gap-2">
                   <Save className="w-4 h-4" />
-                  Update Item
+                  Save Changes
                 </Button>
                 <Button variant="outline" onClick={() => setEditingItem(null)} className="h-12 gap-2">
                   <X className="w-4 h-4" />

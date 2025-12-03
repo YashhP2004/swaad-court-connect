@@ -141,9 +141,9 @@ const OrderCard = ({ order }: { order: Order }) => {
       const { generateOTPForReadyOrder } = await import('@/lib/firebase/orders');
       await generateOTPForReadyOrder(order.id);
       toast.success('New OTP generated successfully!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error regenerating OTP:', error);
-      toast.error('Failed to generate new OTP. Please try again.');
+      toast.error(error.message || 'Failed to generate new OTP. Please try again.');
     } finally {
       setIsRegeneratingOtp(false);
     }

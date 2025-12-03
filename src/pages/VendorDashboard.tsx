@@ -48,6 +48,7 @@ import MenuManagement from '@/components/vendor/MenuManagement';
 import BillingTransactions from '@/components/vendor/BillingTransactions';
 import VendorSettings from '@/components/vendor/VendorSettings';
 import { DemandOverview } from '@/components/vendor/DemandDashboard';
+import { VendorNotifications } from '@/components/vendor/VendorNotifications';
 import {
   calculateOrderVelocityFromOrders,
   calculateDemandScore,
@@ -684,7 +685,7 @@ export default function VendorDashboard() {
       </AnimatePresence>
 
       {/* Top Navigation Bar */}
-      <header className="bg-white/95 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+      <header className="bg-white/80 backdrop-blur-md border-b border-orange-100 sticky top-0 z-30 shadow-sm">
         <div className="flex items-center justify-between px-6 py-4">
           <div className="flex items-center gap-4">
             <Button
@@ -697,17 +698,17 @@ export default function VendorDashboard() {
             </Button>
 
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-rose-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/20">
                 <ChefHat className="w-6 h-6 text-white" />
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">
                   {vendorProfile?.businessName || 'Vendor Dashboard'}
                 </h1>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-500 font-medium">
                   {new Date().toLocaleDateString('en-US', {
                     weekday: 'long',
-                    month: 'short',
+                    month: 'long',
                     day: 'numeric'
                   })}
                 </p>
@@ -716,15 +717,17 @@ export default function VendorDashboard() {
           </div>
 
           <div className="flex items-center gap-4">
-            <Button variant="outline" size="sm" className="gap-2 hidden md:flex">
-              <Bell className="w-4 h-4" />
-              <Badge variant="destructive" className="text-xs">3</Badge>
-            </Button>
+            <VendorNotifications
+              orders={recentOrders}
+              onOrderClick={() => setActiveTab('orders')}
+            />
+
+            <div className="h-8 w-px bg-gray-200 mx-1 hidden md:block"></div>
 
             <div className="flex items-center gap-3">
-              <Avatar className="w-8 h-8">
+              <Avatar className="w-9 h-9 border-2 border-orange-100">
                 <AvatarImage src={vendorProfile?.logo} />
-                <AvatarFallback className="bg-orange-100 text-orange-700 text-sm">
+                <AvatarFallback className="bg-orange-100 text-orange-700 text-sm font-bold">
                   {vendorProfile?.businessName?.charAt(0) || 'V'}
                 </AvatarFallback>
               </Avatar>
@@ -732,9 +735,9 @@ export default function VendorDashboard() {
                 variant="ghost"
                 size="sm"
                 onClick={handleLogout}
-                className="text-gray-700 hover:text-red-600"
+                className="text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-5 h-5" />
               </Button>
             </div>
           </div>

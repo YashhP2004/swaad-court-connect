@@ -203,9 +203,57 @@ export async function getVendorMenuItems(vendorId: string): Promise<any[]> {
     }
 }
 
+export function getVendorMenuItemsRealtime(vendorId: string, callback: (items: any[]) => void): () => void {
+    // Use restaurants collection for menu items to match security rules and public access
+    const menuRef = collection(db, 'restaurants', vendorId, 'menu');
+    // Removed orderBy to avoid index requirements/missing field issues
+    const q = query(menuRef);
+
+    return onSnapshot(q, (snapshot) => {
+        const items = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+
+        // Sort client-side: Newest first
+        items.sort((a: any, b: any) => {
+            const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt || 0);
+            const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt || 0);
+            return dateB.getTime() - dateA.getTime();
+        });
+
+        callback(items);
+    }, (error) => {
+        console.error('Error getting realtime menu items:', error);
+        callback([]);
+    });
+}
+
+export function getVendorCategoriesRealtime(vendorId: string, callback: (categories: any[]) => void): () => void {
+    const categoriesRef = collection(db, 'vendors', vendorId, 'categories');
+    // Removed orderBy to avoid index requirements
+    const q = query(categoriesRef);
+
+    return onSnapshot(q, (snapshot) => {
+        const categories = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+
+        // Sort client-side: By sortOrder
+        categories.sort((a: any, b: any) => (a.sortOrder || 0) - (b.sortOrder || 0));
+
+        callback(categories);
+    }, (error) => {
+        console.error('Error getting realtime categories:', error);
+        callback([]);
+    });
+}
+
 export async function addMenuItem(vendorId: string, menuItem: any): Promise<string> {
     try {
-        const menuRef = collection(db, 'vendors', vendorId, 'menuItems');
+        // Use restaurants collection for menu items
+        const menuRef = collection(db, 'restaurants', vendorId, 'menu');
         const docRef = await addDoc(menuRef, {
             ...menuItem,
             createdAt: Timestamp.now(),
@@ -220,7 +268,8 @@ export async function addMenuItem(vendorId: string, menuItem: any): Promise<stri
 
 export async function updateMenuItem(vendorId: string, itemId: string, updates: any): Promise<void> {
     try {
-        const itemRef = doc(db, 'vendors', vendorId, 'menuItems', itemId);
+        // Use restaurants collection for menu items
+        const itemRef = doc(db, 'restaurants', vendorId, 'menu', itemId);
         await updateDoc(itemRef, {
             ...updates,
             updatedAt: Timestamp.now()
@@ -233,7 +282,8 @@ export async function updateMenuItem(vendorId: string, itemId: string, updates: 
 
 export async function deleteMenuItem(vendorId: string, itemId: string): Promise<void> {
     try {
-        const itemRef = doc(db, 'vendors', vendorId, 'menuItems', itemId);
+        // Use restaurants collection for menu items
+        const itemRef = doc(db, 'restaurants', vendorId, 'menu', itemId);
         await deleteDoc(itemRef);
     } catch (error) {
         console.error('Error deleting menu item:', error);

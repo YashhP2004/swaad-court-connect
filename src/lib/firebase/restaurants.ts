@@ -126,8 +126,9 @@ export async function getMenuItems(restaurantId?: string, flagged?: boolean) {
 
 export async function getRestaurantMenuItems(restaurantId: string) {
     try {
+        // Updated to use restaurants collection to match vendor.ts changes
         const menuQuery = query(
-            collection(db, 'vendors', restaurantId, 'menuItems')
+            collection(db, 'restaurants', restaurantId, 'menu')
             // orderBy('createdAt', 'desc')
         );
         const snapshot = await getDocs(menuQuery);
