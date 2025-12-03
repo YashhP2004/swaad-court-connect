@@ -8,7 +8,9 @@ import {
   Plus,
   Minus,
   Star,
-  MapPin
+  MapPin,
+  ChefHat,
+  ArrowRight
 } from 'lucide-react';
 import { Footer } from '@/components/layout/Footer';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -131,31 +133,35 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <div className="relative h-[500px] w-full overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/50 to-transparent z-10" />
+      <div className="relative h-[600px] w-full overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-t from-navy-950 via-navy-900/60 to-transparent z-10" />
+        <div className="absolute inset-0 bg-navy-950/30 z-10 mix-blend-multiply" />
         <img
           src={heroImage}
           alt="Food Court"
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover scale-105 animate-slow-zoom"
         />
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center px-4">
-          <h1 className="text-4xl md:text-6xl font-bold text-white mb-6 tracking-tight">
-            Swaad<span className="text-orange-500">Court</span>
-          </h1>
-          <p className="text-xl text-gray-200 mb-8 max-w-2xl">
-            Experience the future of food court dining. Order from multiple restaurants in a single cart.
-          </p>
+          <div className="animate-fade-in-up">
+            <h1 className="text-5xl md:text-7xl font-extrabold text-white mb-6 tracking-tight drop-shadow-2xl">
+              Swaad<span className="text-transparent bg-clip-text bg-gradient-to-r from-peach-400 to-peach-600">Court</span>
+            </h1>
+            <p className="text-xl md:text-2xl text-gray-100 mb-10 max-w-2xl mx-auto font-medium drop-shadow-lg">
+              Experience the future of food court dining. <br />
+              <span className="text-peach-200">Order from multiple restaurants in a single cart.</span>
+            </p>
+          </div>
 
-          <div className="w-full max-w-2xl relative group">
-            <div className="absolute inset-0 bg-orange-500/20 blur-xl rounded-full group-hover:bg-orange-500/30 transition-all" />
-            <div className="relative flex items-center bg-white/10 backdrop-blur-md border border-white/20 rounded-full p-2 shadow-2xl">
-              <Search className="w-6 h-6 text-gray-400 ml-4" />
+          <div className="w-full max-w-3xl relative group animate-fade-in-up delay-100">
+            <div className="absolute inset-0 bg-peach-500/20 blur-2xl rounded-full group-hover:bg-peach-500/30 transition-all duration-500" />
+            <div className="relative flex items-center bg-white/10 backdrop-blur-xl border border-white/20 rounded-full p-2 shadow-2xl hover:shadow-peach-500/10 hover:border-peach-500/30 transition-all duration-300">
+              <Search className="w-6 h-6 text-peach-200 ml-4" />
               <input
                 type="text"
                 placeholder="Search for restaurants, cuisines, or dishes..."
-                className="flex-1 bg-transparent border-none focus:ring-0 text-white placeholder-gray-400 px-4 py-2"
+                className="flex-1 bg-transparent border-none focus:ring-0 text-white placeholder-gray-300 px-4 py-3 text-lg"
               />
-              <Button className="rounded-full bg-orange-500 hover:bg-orange-600 text-white px-8">
+              <Button className="rounded-full bg-gradient-to-r from-peach-500 to-peach-600 hover:from-peach-600 hover:to-peach-700 text-navy-950 font-bold px-8 py-6 text-lg shadow-lg shadow-peach-500/20 transition-all hover:scale-105">
                 Search
               </Button>
             </div>
@@ -168,8 +174,8 @@ export default function Home() {
         <section>
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-500/10 rounded-lg">
-                <TrendingUp className="w-6 h-6 text-orange-500" />
+              <div className="p-2 bg-peach-500/10 rounded-lg">
+                <TrendingUp className="w-6 h-6 text-peach-500" />
               </div>
               <h2 className="text-2xl font-bold text-white">Trending Now</h2>
             </div>
@@ -177,44 +183,54 @@ export default function Home() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {trendingItems.map((item) => (
-              <Card key={item.id} className="bg-neutral-900 border-neutral-800 overflow-hidden hover:border-neutral-700 transition-all group">
-                <div className="relative h-48 overflow-hidden">
+              <Card key={item.id} className="bg-navy-900 border-white/10 overflow-hidden hover:border-peach-500/50 hover:shadow-lg hover:shadow-peach-500/10 transition-all duration-300 group relative">
+                <div className="relative h-52 overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-t from-navy-900 via-transparent to-transparent z-10 opacity-60" />
                   <img
                     src={item.image || '/placeholder-food.jpg'}
                     alt={item.name}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                   />
-                  <div className="absolute top-3 right-3">
+                  <div className="absolute top-3 right-3 z-20 bg-black/20 backdrop-blur-sm p-1 rounded-full">
                     <VegNonVegIndicator isVeg={item.isVeg} />
                   </div>
                   {item.isPopular && (
-                    <Badge className="absolute top-3 left-3 bg-orange-500">
+                    <Badge className="absolute top-3 left-3 z-20 bg-peach-500 text-white border-none shadow-lg shadow-peach-500/20 font-bold">
                       Popular
                     </Badge>
                   )}
+                  <div className="absolute bottom-3 right-3 z-20 flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-lg border border-white/10">
+                    <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
+                    <span className="text-xs font-bold text-white">{item.rating}</span>
+                  </div>
                 </div>
-                <CardContent className="p-5">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <h3 className="text-lg font-semibold text-white mb-1 group-hover:text-orange-500 transition-colors">
+                <CardContent className="p-5 relative">
+                  <div className="mb-3">
+                    <div className="flex justify-between items-start mb-1">
+                      <h3 className="text-lg font-bold text-white group-hover:text-peach-400 transition-colors line-clamp-1">
                         {item.name}
                       </h3>
-                      <p className="text-sm text-gray-400">{item.restaurantName}</p>
                     </div>
-                    <div className="flex items-center gap-1 bg-neutral-800 px-2 py-1 rounded-md">
-                      <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-                      <span className="text-xs font-medium text-white">{item.rating}</span>
-                    </div>
+                    <p className="text-sm text-gray-400 font-medium flex items-center gap-1">
+                      <ChefHat className="w-3 h-3" /> {item.restaurantName}
+                    </p>
                   </div>
-                  <p className="text-gray-400 text-sm mb-4 line-clamp-2">{item.description}</p>
-                  <div className="flex items-center justify-between mt-auto">
-                    <span className="text-lg font-bold text-white">₹{item.price}</span>
+
+                  <p className="text-gray-500 text-sm mb-5 line-clamp-2 h-10 leading-relaxed">
+                    {item.description}
+                  </p>
+
+                  <div className="flex items-center justify-between mt-auto pt-4 border-t border-white/5">
+                    <div className="flex flex-col">
+                      <span className="text-xs text-gray-500 font-medium uppercase tracking-wider">Price</span>
+                      <span className="text-xl font-bold text-peach-400">₹{item.price}</span>
+                    </div>
                     <Button
                       size="sm"
-                      className="bg-white text-black hover:bg-gray-200"
+                      className="bg-white text-navy-950 hover:bg-peach-50 hover:text-peach-600 font-bold px-6 shadow-md transition-all active:scale-95"
                       onClick={() => handleAddToCart(item)}
                     >
-                      Add
+                      Add +
                     </Button>
                   </div>
                 </CardContent>
@@ -227,15 +243,15 @@ export default function Home() {
         <section>
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-500/10 rounded-lg">
-                <Utensils className="w-6 h-6 text-orange-500" />
+              <div className="p-2 bg-peach-500/10 rounded-lg">
+                <Utensils className="w-6 h-6 text-peach-500" />
               </div>
               <h2 className="text-2xl font-bold text-white">Popular Restaurants</h2>
             </div>
             <div className="flex items-center gap-4">
               <VegNonVegToggle isVeg={isVegOnly} onToggle={() => setIsVegOnly(!isVegOnly)} />
               <Link to="/restaurants">
-                <Button variant="ghost" className="text-orange-500 hover:text-orange-400 hover:bg-orange-500/10">
+                <Button variant="ghost" className="text-peach-500 hover:text-peach-400 hover:bg-peach-500/10">
                   View All <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </Link>
@@ -252,27 +268,35 @@ export default function Home() {
         </section>
 
         {/* Features Section */}
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-8 py-12 border-t border-neutral-800">
-          <div className="flex flex-col items-center text-center space-y-4 p-6 rounded-2xl bg-neutral-900/50 border border-neutral-800">
-            <div className="p-4 bg-orange-500/10 rounded-full">
-              <Utensils className="w-8 h-8 text-orange-500" />
+        {/* Features Section */}
+        <section className="py-20 border-t border-white/5 relative overflow-hidden">
+          <div className="absolute inset-0 bg-navy-950/50 z-0" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-peach-500/5 rounded-full blur-3xl z-0" />
+
+          <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="flex flex-col items-center text-center p-8 bg-navy-900/50 backdrop-blur-md border border-white/5 hover:border-peach-500/50 hover:shadow-xl hover:shadow-peach-500/10 transition-all duration-300 group rounded-none">
+              <div className="p-4 bg-navy-950 border border-white/10 group-hover:border-peach-500/30 transition-colors mb-6 rounded-none shadow-lg">
+                <Utensils className="w-10 h-10 text-peach-500 group-hover:scale-110 transition-transform duration-300" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-3 group-hover:text-peach-400 transition-colors">Multi-Restaurant Ordering</h3>
+              <p className="text-gray-400 leading-relaxed">Order from multiple restaurants in a single cart. No more separate orders.</p>
             </div>
-            <h3 className="text-xl font-semibold text-white">Multi-Restaurant Ordering</h3>
-            <p className="text-gray-400">Order from multiple restaurants in a single cart. No more separate orders.</p>
-          </div>
-          <div className="flex flex-col items-center text-center space-y-4 p-6 rounded-2xl bg-neutral-900/50 border border-neutral-800">
-            <div className="p-4 bg-orange-500/10 rounded-full">
-              <MapPin className="w-8 h-8 text-orange-500" />
+
+            <div className="flex flex-col items-center text-center p-8 bg-navy-900/50 backdrop-blur-md border border-white/5 hover:border-peach-500/50 hover:shadow-xl hover:shadow-peach-500/10 transition-all duration-300 group rounded-none">
+              <div className="p-4 bg-navy-950 border border-white/10 group-hover:border-peach-500/30 transition-colors mb-6 rounded-none shadow-lg">
+                <MapPin className="w-10 h-10 text-peach-500 group-hover:scale-110 transition-transform duration-300" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-3 group-hover:text-peach-400 transition-colors">Live Order Tracking</h3>
+              <p className="text-gray-400 leading-relaxed">Track your food in real-time from preparation to pickup.</p>
             </div>
-            <h3 className="text-xl font-semibold text-white">Live Order Tracking</h3>
-            <p className="text-gray-400">Track your food in real-time from preparation to pickup.</p>
-          </div>
-          <div className="flex flex-col items-center text-center space-y-4 p-6 rounded-2xl bg-neutral-900/50 border border-neutral-800">
-            <div className="p-4 bg-orange-500/10 rounded-full">
-              <Award className="w-8 h-8 text-orange-500" />
+
+            <div className="flex flex-col items-center text-center p-8 bg-navy-900/50 backdrop-blur-md border border-white/5 hover:border-peach-500/50 hover:shadow-xl hover:shadow-peach-500/10 transition-all duration-300 group rounded-none">
+              <div className="p-4 bg-navy-950 border border-white/10 group-hover:border-peach-500/30 transition-colors mb-6 rounded-none shadow-lg">
+                <Award className="w-10 h-10 text-peach-500 group-hover:scale-110 transition-transform duration-300" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-3 group-hover:text-peach-400 transition-colors">Exclusive Deals</h3>
+              <p className="text-gray-400 leading-relaxed">Get the best offers and discounts from your favorite restaurants.</p>
             </div>
-            <h3 className="text-xl font-semibold text-white">Exclusive Deals</h3>
-            <p className="text-gray-400">Get the best offers and discounts from your favorite restaurants.</p>
           </div>
         </section>
       </div>
@@ -297,7 +321,7 @@ export default function Home() {
                 <div>
                   <h3 className="font-semibold text-lg">{selectedMenuItem.name}</h3>
                   <p className="text-sm text-gray-400">{selectedMenuItem.restaurantName}</p>
-                  <p className="text-orange-500 font-bold mt-1">₹{selectedMenuItem.price}</p>
+                  <p className="text-peach-500 font-bold mt-1">₹{selectedMenuItem.price}</p>
                 </div>
               </div>
 
@@ -330,12 +354,12 @@ export default function Home() {
                   placeholder="E.g., less spicy, extra sauce..."
                   value={specialInstructions}
                   onChange={(e) => setSpecialInstructions(e.target.value)}
-                  className="bg-neutral-950 border-neutral-800 focus:border-orange-500 min-h-[80px]"
+                  className="bg-neutral-950 border-neutral-800 focus:border-peach-500 min-h-[80px]"
                 />
               </div>
 
               <Button
-                className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-6"
+                className="w-full bg-peach-500 hover:bg-peach-600 text-navy-900 font-semibold py-6"
                 onClick={handleConfirmAddToCart}
               >
                 Add to Cart - ₹{selectedMenuItem.price * quantity}
@@ -348,20 +372,4 @@ export default function Home() {
   );
 }
 
-function ArrowRight({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="M5 12h14" />
-      <path d="m12 5 7 7-7 7" />
-    </svg>
-  );
-}
+

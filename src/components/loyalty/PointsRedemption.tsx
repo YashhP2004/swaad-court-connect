@@ -80,14 +80,14 @@ export function PointsRedemption({
     const discount = pointsToRedeem * 0.1;
 
     return (
-        <Card className={`border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50 ${className}`}>
+        <Card className={`border-2 border-navy-700 bg-navy-800 ${className}`}>
             <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2 text-purple-700">
+                    <CardTitle className="flex items-center gap-2 text-peach-500">
                         <Gift className="w-5 h-5" />
                         💎 Loyalty Points
                     </CardTitle>
-                    <Badge variant="secondary" className="bg-purple-100 text-purple-700">
+                    <Badge variant="secondary" className="bg-peach-500/10 text-peach-500 hover:bg-peach-500/20">
                         {availablePoints} points
                     </Badge>
                 </div>
@@ -95,24 +95,24 @@ export function PointsRedemption({
 
             <CardContent className="space-y-4">
                 {/* Points Balance */}
-                <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-purple-200">
+                <div className="flex items-center justify-between p-3 bg-navy-900 rounded-lg border border-navy-700">
                     <div>
-                        <p className="text-sm text-muted-foreground">Available Points</p>
-                        <p className="text-2xl font-bold text-purple-700">{availablePoints}</p>
+                        <p className="text-sm text-gray-400">Available Points</p>
+                        <p className="text-2xl font-bold text-white">{availablePoints}</p>
                     </div>
                     <div className="text-right">
-                        <p className="text-sm text-muted-foreground">Worth up to</p>
-                        <p className="text-xl font-semibold text-green-600">
+                        <p className="text-sm text-gray-400">Worth up to</p>
+                        <p className="text-xl font-semibold text-green-500">
                             {pointsToCurrency(maxPoints)}
                         </p>
                     </div>
                 </div>
 
                 {/* Toggle Switch */}
-                <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-purple-200">
+                <div className="flex items-center justify-between p-3 bg-navy-900 rounded-lg border border-navy-700">
                     <div className="flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-purple-600" />
-                        <span className="font-medium">Use loyalty points</span>
+                        <Sparkles className="w-4 h-4 text-peach-500" />
+                        <span className="font-medium text-white">Use loyalty points</span>
                     </div>
                     <Switch
                         checked={usePoints}
@@ -154,8 +154,8 @@ export function PointsRedemption({
                         {/* Slider */}
                         <div className="space-y-2">
                             <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Redeem points:</span>
-                                <span className="font-semibold text-purple-700">
+                                <span className="text-gray-400">Redeem points:</span>
+                                <span className="font-semibold text-peach-500">
                                     {pointsToRedeem} points
                                 </span>
                             </div>
@@ -166,7 +166,7 @@ export function PointsRedemption({
                                 step={POINTS_INCREMENT}
                                 className="py-4"
                             />
-                            <div className="flex justify-between text-xs text-muted-foreground">
+                            <div className="flex justify-between text-xs text-gray-400">
                                 <span>0</span>
                                 <span>{maxPoints} max</span>
                             </div>
@@ -210,8 +210,8 @@ export function PointsRedemption({
 
                 {/* Promotional Message */}
                 {!usePoints && (
-                    <div className="p-3 bg-gradient-to-r from-purple-100 to-pink-100 rounded-lg border border-purple-200">
-                        <p className="text-sm text-purple-800 text-center">
+                    <div className="p-3 bg-navy-900 rounded-lg border border-navy-700">
+                        <p className="text-sm text-peach-400 text-center">
                             🎁 Use your points to get instant discounts!
                         </p>
                     </div>

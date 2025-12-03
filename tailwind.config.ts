@@ -43,7 +43,10 @@ export default {
 				},
 				accent: {
 					DEFAULT: 'hsl(var(--accent))',
-					foreground: 'hsl(var(--accent-foreground))'
+					foreground: 'hsl(var(--accent-foreground))',
+					teal: 'hsl(var(--accent-teal))',
+					gold: 'hsl(var(--accent-gold))',
+					purple: 'hsl(var(--accent-purple))',
 				},
 				popover: {
 					DEFAULT: 'hsl(var(--popover))',
@@ -60,6 +63,32 @@ export default {
 				warning: {
 					DEFAULT: 'hsl(var(--warning))',
 					foreground: 'hsl(var(--warning-foreground))'
+				},
+				navy: {
+					50: 'hsl(var(--navy-50))',
+					100: 'hsl(var(--navy-100))',
+					200: 'hsl(var(--navy-200))',
+					300: 'hsl(var(--navy-300))',
+					400: 'hsl(var(--navy-400))',
+					500: 'hsl(var(--navy-500))',
+					600: 'hsl(var(--navy-600))',
+					700: 'hsl(var(--navy-700))',
+					800: 'hsl(var(--navy-800))',
+					900: 'hsl(var(--navy-900))',
+					950: 'hsl(var(--navy-950))',
+				},
+				peach: {
+					50: 'hsl(var(--peach-50))',
+					100: 'hsl(var(--peach-100))',
+					200: 'hsl(var(--peach-200))',
+					300: 'hsl(var(--peach-300))',
+					400: 'hsl(var(--peach-400))',
+					500: 'hsl(var(--peach-500))',
+					600: 'hsl(var(--peach-600))',
+					700: 'hsl(var(--peach-700))',
+					800: 'hsl(var(--peach-800))',
+					900: 'hsl(var(--peach-900))',
+					950: 'hsl(var(--peach-950))',
 				},
 				veg: 'hsl(var(--veg))',
 				'non-veg': 'hsl(var(--non-veg))',
@@ -86,8 +115,8 @@ export default {
 				'food': 'var(--shadow-food)'
 			},
 			fontFamily: {
-				sans: ['Inter', 'system-ui', 'sans-serif'],
-				heading: ['Poppins', 'Inter', 'system-ui', 'sans-serif']
+				sans: ['var(--font-body)', 'Inter', 'system-ui', 'sans-serif'],
+				heading: ['var(--font-heading)', 'Poppins', 'Inter', 'system-ui', 'sans-serif']
 			},
 			borderRadius: {
 				lg: 'var(--radius)',

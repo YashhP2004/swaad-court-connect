@@ -465,7 +465,7 @@ export default function Profile() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-purple-600 to-pink-600 border-0 text-white shadow-warm transform transition-transform duration-300 hover:scale-105">
+          <Card className="bg-gradient-to-br from-peach-500 to-orange-600 border-0 text-white shadow-warm transform transition-transform duration-300 hover:scale-105">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-xl">
@@ -473,7 +473,7 @@ export default function Profile() {
                 </div>
                 <div className="text-right">
                   <div className="text-5xl font-bold mb-1">{profile.loyaltyPoints || 0}</div>
-                  <div className="text-purple-100 font-medium">Loyalty Points</div>
+                  <div className="text-white font-medium">Loyalty Points</div>
                 </div>
               </div>
             </CardContent>

@@ -41,9 +41,9 @@ export function Header({ onMenuClick, showMenuButton = false }: HeaderProps) {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur-md">
+    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-navy-950/80 backdrop-blur-md shadow-lg shadow-black/20">
       <div className="container mx-auto px-4">
-        <div className="flex h-16 items-center justify-between">
+        <div className="flex h-20 items-center justify-between">
           {/* Left Section */}
           <div className="flex items-center gap-4">
             {showMenuButton && (
@@ -51,77 +51,82 @@ export function Header({ onMenuClick, showMenuButton = false }: HeaderProps) {
                 variant="ghost"
                 size="icon-sm"
                 onClick={onMenuClick}
-                className="md:hidden"
+                className="md:hidden text-gray-300 hover:text-peach-400 hover:bg-white/5"
               >
-                <Menu className="h-5 w-5" />
+                <Menu className="h-6 w-6" />
               </Button>
             )}
 
-            <Link to="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-lg">S</span>
+            <Link to="/" className="flex items-center gap-3 group">
+              <div className="w-10 h-10 bg-gradient-to-br from-peach-500 to-peach-600 rounded-xl flex items-center justify-center shadow-lg shadow-peach-500/20 group-hover:scale-105 transition-transform">
+                <span className="text-navy-950 font-extrabold text-xl">S</span>
               </div>
-              <span className="font-heading font-bold text-xl bg-gradient-primary bg-clip-text text-transparent">
-                Swaadcourt
+              <span className="font-heading font-bold text-2xl text-white tracking-tight group-hover:text-peach-400 transition-colors">
+                Swaad<span className="text-peach-500">Court</span>
               </span>
             </Link>
           </div>
 
           {/* Center Section - Navigation (hidden on mobile) */}
-          <nav className="hidden md:flex items-center gap-6">
+          <nav className="hidden md:flex items-center gap-8 bg-white/5 px-6 py-2 rounded-full border border-white/5 backdrop-blur-sm">
             <Link
               to="/"
               className={cn(
-                "text-sm font-medium transition-colors hover:text-primary",
-                isActive('/') ? 'text-primary' : 'text-muted-foreground'
+                "text-sm font-bold transition-all hover:text-peach-400 relative py-1",
+                isActive('/') ? 'text-peach-400' : 'text-gray-300'
               )}
             >
               Home
+              {isActive('/') && (
+                <motion.div
+                  layoutId="activeNav"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-peach-500 rounded-full"
+                />
+              )}
             </Link>
             <Link
               to="/restaurants"
               className={cn(
-                "text-sm font-medium transition-colors hover:text-primary",
-                isActive('/restaurants') ? 'text-primary' : 'text-muted-foreground'
+                "text-sm font-bold transition-all hover:text-peach-400 relative py-1",
+                isActive('/restaurants') ? 'text-peach-400' : 'text-gray-300'
               )}
             >
               Restaurants
+              {isActive('/restaurants') && (
+                <motion.div
+                  layoutId="activeNav"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-peach-500 rounded-full"
+                />
+              )}
             </Link>
             <Link
               to="/orders"
               className={cn(
-                "text-sm font-medium transition-colors hover:text-primary",
-                isActive('/orders') ? 'text-primary' : 'text-muted-foreground'
+                "text-sm font-bold transition-all hover:text-peach-400 relative py-1",
+                isActive('/orders') ? 'text-peach-400' : 'text-gray-300'
               )}
             >
               Orders
+              {isActive('/orders') && (
+                <motion.div
+                  layoutId="activeNav"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-peach-500 rounded-full"
+                />
+              )}
             </Link>
           </nav>
 
           {/* Right Section */}
-          <div className="flex items-center gap-2">
-            {/* Theme Toggle */}
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={toggleTheme}
-              className="food-pulse"
-            >
-              {theme === 'light' ? (
-                <Moon className="h-4 w-4" />
-              ) : (
-                <Sun className="h-4 w-4" />
-              )}
-            </Button>
-
+          <div className="flex items-center gap-3">
             {/* Search */}
             <Button
               variant="ghost"
               size="icon-sm"
               asChild
+              className="text-gray-300 hover:text-peach-400 hover:bg-white/5"
             >
               <Link to="/search">
-                <Search className="h-4 w-4" />
+                <Search className="h-5 w-5" />
               </Link>
             </Button>
 
@@ -131,24 +136,23 @@ export function Header({ onMenuClick, showMenuButton = false }: HeaderProps) {
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  className="relative"
+                  className="relative text-gray-300 hover:text-peach-400 hover:bg-white/5"
                 >
                   <motion.div
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.95 }}
                   >
-                    <ShoppingCart className="h-4 w-4" />
+                    <ShoppingCart className="h-5 w-5" />
                     <AnimatePresence>
                       {totalItems > 0 && (
                         <motion.div
                           initial={{ scale: 0.5, opacity: 0 }}
                           animate={{ scale: 1, opacity: 1 }}
                           exit={{ scale: 0.5, opacity: 0 }}
-                          className="absolute -top-1 -right-1"
+                          className="absolute -top-1.5 -right-1.5"
                         >
                           <Badge
-                            variant="destructive"
-                            className="h-5 w-5 flex items-center justify-center p-0 text-xs animate-cart-bounce"
+                            className="h-5 w-5 flex items-center justify-center p-0 text-xs font-bold bg-peach-500 text-navy-950 border-2 border-navy-900"
                           >
                             {totalItems > 9 ? '9+' : totalItems}
                           </Badge>
@@ -167,21 +171,28 @@ export function Header({ onMenuClick, showMenuButton = false }: HeaderProps) {
                 variant="ghost"
                 size="icon-sm"
                 asChild
+                className="ml-2"
               >
                 <Link to="/profile">
                   {user?.avatar ? (
                     <img
                       src={user.avatar}
                       alt={user.name}
-                      className="h-6 w-6 rounded-full object-cover"
+                      className="h-9 w-9 rounded-full object-cover border-2 border-peach-500/50 hover:border-peach-500 transition-colors"
                     />
                   ) : (
-                    <User className="h-4 w-4" />
+                    <div className="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center text-peach-400 border border-white/10 hover:bg-white/20 transition-colors">
+                      <User className="h-5 w-5" />
+                    </div>
                   )}
                 </Link>
               </Button>
             ) : (
-              <Button variant="food" size="sm" asChild>
+              <Button
+                size="sm"
+                asChild
+                className="ml-2 bg-peach-500 hover:bg-peach-600 text-navy-950 font-bold px-6"
+              >
                 <Link to="/login">Login</Link>
               </Button>
             )}

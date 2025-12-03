@@ -14,7 +14,8 @@ import {
   Package,
   CreditCard,
   MessageSquare,
-  ChefHat
+  ChefHat,
+  Mail
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -455,62 +456,83 @@ export default function OrdersManagement() {
               exit={{ opacity: 0, y: -20 }}
               transition={{ delay: index * 0.05 }}
             >
-              <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
-                <CardContent className="p-6">
+              <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300 bg-navy-900 text-white overflow-hidden group relative">
+                {/* Decorative background elements */}
+                <div className="absolute top-0 right-0 w-64 h-64 bg-peach-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
+                <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -ml-32 -mb-32 pointer-events-none"></div>
+
+                <CardContent className="p-6 relative z-10">
                   <div className="flex flex-col lg:flex-row gap-6">
                     {/* Order Info */}
                     <div className="flex-1">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="w-10 h-10">
+                      <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-4">
+                          <Avatar className="w-12 h-12 border-2 border-white/10 shadow-md">
                             <AvatarImage src={order.customerAvatar} />
-                            <AvatarFallback>
+                            <AvatarFallback className="bg-gradient-to-br from-navy-700 to-navy-800 text-peach-400 font-bold text-lg">
                               {order.customerName.charAt(0)}
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <h3 className="font-semibold text-lg">{order.customerName}</h3>
-                            <p className="text-sm text-gray-600">Order #{order.orderNumber}</p>
+                            <h3 className="font-bold text-xl text-white tracking-tight">{order.customerName}</h3>
+                            <p className="text-sm text-gray-400 font-medium flex items-center gap-2">
+                              Order <span className="text-peach-400 font-mono">#{order.orderNumber || order.id.slice(-6)}</span>
+                            </p>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                          {getStatusIcon(order.vendorStatus)}
+                        <div className="flex items-center gap-3">
+                          <div className="bg-white/5 backdrop-blur-sm p-2 rounded-xl border border-white/10 shadow-sm">
+                            {getStatusIcon(order.vendorStatus)}
+                          </div>
                           {getStatusBadge(order.vendorStatus)}
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <Phone className="w-4 h-4" />
-                          {order.customerEmail || 'No email'}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 bg-white/5 p-4 rounded-xl border border-white/5 backdrop-blur-sm">
+                        <div className="flex items-center gap-3 text-sm text-gray-300">
+                          <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-peach-400">
+                            {order.customerEmail ? <Mail className="w-4 h-4" /> : <Phone className="w-4 h-4" />}
+                          </div>
+                          <span className="font-medium">{order.customerEmail || order.customerPhone || 'No contact info'}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <Package className="w-4 h-4" />
-                          {order.orderType === 'dine-in' ? `Table ${order.tableNumber || 'N/A'}` : 'Takeaway'}
+                        <div className="flex items-center gap-3 text-sm text-gray-300">
+                          <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-blue-400">
+                            <Package className="w-4 h-4" />
+                          </div>
+                          <span className="font-medium">{order.orderType === 'dine-in' ? `Table ${order.tableNumber || 'N/A'}` : 'Takeaway'}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <CreditCard className="w-4 h-4" />
-                          ₹{Number(order.totalAmount) || 0} ({order.paymentStatus})
+                        <div className="flex items-center gap-3 text-sm text-gray-300">
+                          <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-green-400">
+                            <CreditCard className="w-4 h-4" />
+                          </div>
+                          <span className="font-medium">₹{Number(order.totalAmount) || 0}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <Clock className="w-4 h-4" />
-                          {order.createdAt.toLocaleTimeString()}
+                        <div className="flex items-center gap-3 text-sm text-gray-300">
+                          <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-purple-400">
+                            <Clock className="w-4 h-4" />
+                          </div>
+                          <span className="font-medium">{order.createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
                       </div>
 
                       <div className="mb-4">
-                        <h4 className="font-medium mb-2">Items ({order.items?.length || 0})</h4>
-                        <div className="space-y-1">
+                        <h4 className="font-bold text-sm text-gray-400 uppercase tracking-wider mb-3">Order Items ({order.items?.length || 0})</h4>
+                        <div className="space-y-2">
                           {order.items?.slice(0, 3).map((item, idx) => (
-                            <div key={idx} className="flex justify-between text-sm">
-                              <span>{item.quantity}x {item.name}</span>
-                              <span>₹{(Number(item.price) || 0) * (Number(item.quantity) || 1)}</span>
+                            <div key={idx} className="flex justify-between items-center text-sm p-2 hover:bg-white/5 rounded-lg transition-colors">
+                              <div className="flex items-center gap-3">
+                                <span className="w-6 h-6 rounded-md bg-peach-500/20 text-peach-400 flex items-center justify-center text-xs font-bold">
+                                  {item.quantity}x
+                                </span>
+                                <span className="text-gray-200 font-medium">{item.name}</span>
+                              </div>
+                              <span className="text-white font-bold">₹{(Number(item.price) || 0) * (Number(item.quantity) || 1)}</span>
                             </div>
                           ))}
                           {order.items?.length > 3 && (
-                            <p className="text-sm text-gray-500">
-                              +{order.items.length - 3} more items
+                            <p className="text-xs text-peach-400 font-medium pl-2 pt-1">
+                              +{order.items.length - 3} more items...
                             </p>
                           )}
                         </div>
@@ -518,46 +540,46 @@ export default function OrdersManagement() {
 
                       {order.specialInstructions && (
                         <div className="mb-4">
-                          <div className="flex items-center gap-2 mb-1">
-                            <MessageSquare className="w-4 h-4 text-gray-500" />
-                            <span className="text-sm font-medium">Special Instructions</span>
+                          <div className="flex items-center gap-2 mb-2">
+                            <MessageSquare className="w-4 h-4 text-peach-400" />
+                            <span className="text-xs font-bold text-peach-400 uppercase tracking-wider">Special Instructions</span>
                           </div>
-                          <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
-                            {order.specialInstructions}
+                          <p className="text-sm text-gray-300 bg-white/5 border border-white/10 p-3 rounded-xl italic">
+                            "{order.specialInstructions}"
                           </p>
                         </div>
                       )}
                     </div>
 
                     {/* Actions */}
-                    <div className="flex flex-col gap-3 lg:w-56">
+                    <div className="flex flex-col gap-3 lg:w-64 border-t lg:border-t-0 lg:border-l border-white/10 pt-6 lg:pt-0 lg:pl-6">
                       <Button
                         variant="outline"
                         onClick={() => setSelectedOrder(order)}
-                        className="gap-2 w-full"
+                        className="gap-2 w-full bg-transparent border-white/20 text-white hover:bg-white/10 hover:text-peach-400 hover:border-peach-400/50 transition-all group/btn"
                       >
-                        <Eye className="w-4 h-4" />
+                        <Eye className="w-4 h-4 group-hover/btn:scale-110 transition-transform" />
                         View Details
                       </Button>
 
                       {/* Quick Status Dropdown - ALWAYS VISIBLE */}
                       {!['completed', 'cancelled'].includes(order.vendorStatus) && (
-                        <div className="space-y-2">
-                          <label className="text-xs font-medium text-gray-700">Update Status:</label>
+                        <div className="space-y-2 bg-white/5 p-3 rounded-xl border border-white/10">
+                          <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Update Status</label>
                           <Select
                             value={order.vendorStatus}
                             onValueChange={(newStatus) => handleStatusUpdate(order.id, newStatus as VendorOrderStatus)}
                           >
-                            <SelectTrigger className="w-full">
+                            <SelectTrigger className="w-full bg-navy-950 border-white/10 text-white focus:ring-peach-500/50">
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="queued">Queued</SelectItem>
-                              <SelectItem value="preparing">Preparing</SelectItem>
-                              <SelectItem value="ready">Ready</SelectItem>
-                              <SelectItem value="collected">Collected</SelectItem>
-                              <SelectItem value="completed">Completed</SelectItem>
-                              <SelectItem value="cancelled">Cancelled</SelectItem>
+                            <SelectContent className="bg-navy-900 border-white/10 text-white">
+                              <SelectItem value="queued" className="focus:bg-white/10 focus:text-white">Queued</SelectItem>
+                              <SelectItem value="preparing" className="focus:bg-white/10 focus:text-white">Preparing</SelectItem>
+                              <SelectItem value="ready" className="focus:bg-white/10 focus:text-white">Ready</SelectItem>
+                              <SelectItem value="collected" className="focus:bg-white/10 focus:text-white">Collected</SelectItem>
+                              <SelectItem value="completed" className="focus:bg-white/10 focus:text-white">Completed</SelectItem>
+                              <SelectItem value="cancelled" className="focus:bg-white/10 focus:text-white">Cancelled</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -567,7 +589,7 @@ export default function OrdersManagement() {
                       {order.vendorStatus === 'queued' && (
                         <Button
                           onClick={() => handleStatusUpdate(order.id, 'preparing')}
-                          className="gap-2 w-full bg-orange-600 hover:bg-orange-700 text-white shadow-md"
+                          className="gap-2 w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg shadow-orange-500/20 border-0"
                         >
                           <ChefHat className="w-4 w-4" />
                           Start Preparing
@@ -577,7 +599,7 @@ export default function OrdersManagement() {
                       {order.vendorStatus === 'preparing' && (
                         <Button
                           onClick={() => handleStatusUpdate(order.id, 'ready')}
-                          className="gap-2 w-full bg-green-600 hover:bg-green-700 text-white shadow-md"
+                          className="gap-2 w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg shadow-green-500/20 border-0"
                         >
                           <Package className="w-4 h-4" />
                           Mark as Ready
@@ -587,7 +609,7 @@ export default function OrdersManagement() {
                       {order.vendorStatus === 'ready' && (
                         <Button
                           onClick={() => handleOpenOtpDialog(order)}
-                          className="gap-2 w-full bg-blue-600 hover:bg-blue-700 text-white shadow-md"
+                          className="gap-2 w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/20 border-0"
                         >
                           <CheckCircle className="w-4 h-4" />
                           Verify & Collect
@@ -597,7 +619,7 @@ export default function OrdersManagement() {
                       {order.vendorStatus === 'collected' && (
                         <Button
                           onClick={() => handleStatusUpdate(order.id, 'completed')}
-                          className="gap-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-md"
+                          className="gap-2 w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg shadow-emerald-500/20 border-0"
                         >
                           <CheckCircle className="w-4 h-4" />
                           Mark Completed
@@ -608,16 +630,19 @@ export default function OrdersManagement() {
                         <Button
                           variant="outline"
                           onClick={() => handleStatusUpdate(order.id, 'cancelled')}
-                          className="gap-2 w-full border-red-300 text-red-600 hover:bg-red-50"
+                          className="gap-2 w-full border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 hover:border-red-500/50"
                         >
                           <XCircle className="w-4 h-4" />
-                          Cancel
+                          Cancel Order
                         </Button>
                       )}
 
                       {['completed', 'cancelled'].includes(order.vendorStatus) && (
-                        <div className="text-xs text-center text-gray-500 py-2 bg-gray-50 rounded">
-                          Order {order.vendorStatus}
+                        <div className={`text-xs font-bold text-center py-3 rounded-xl border ${order.vendorStatus === 'completed'
+                          ? 'bg-green-500/10 text-green-400 border-green-500/20'
+                          : 'bg-red-500/10 text-red-400 border-red-500/20'
+                          }`}>
+                          ORDER {order.vendorStatus.toUpperCase()}
                         </div>
                       )}
                     </div>
@@ -648,7 +673,7 @@ export default function OrdersManagement() {
         <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Order Details - #{selectedOrder.id.slice(-6)}</DialogTitle>
+              <DialogTitle>Order Details - #{selectedOrder.orderNumber || selectedOrder.id.slice(-6)}</DialogTitle>
             </DialogHeader>
 
             <div className="space-y-6">

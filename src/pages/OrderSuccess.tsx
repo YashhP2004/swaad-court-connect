@@ -47,7 +47,7 @@ export default function OrderSuccess() {
             <div className="space-y-3 pt-4">
               <Button
                 className="w-full"
-                onClick={() => navigate('/profile')}
+                onClick={() => navigate('/orders')}
               >
                 View My Orders
               </Button>

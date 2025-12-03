@@ -1,0 +1,83 @@
+/* ==================== PEACH & CONTRAST ENHANCEMENTS ==================== */
+
+/* Sharp Lining Utilities */
+@layer utilities {
+    .border-sharp {
+        border-color: rgba(255, 255, 255, 0.8);
+    }
+
+    .border-sharp-full {
+        border-color: #ffffff;
+    }
+
+    .divide-sharp>*+* {
+        border-color: rgba(255, 255, 255, 0.6);
+    }
+
+    .ring-sharp {
+        --tw-ring-color: #ffffff;
+        --tw-ring-opacity: 0.8;
+    }
+}
+
+/* Vibrant Peach Utilities */
+@layer utilities {
+    .bg-peach-vibrant {
+        background-color: hsl(var(--peach-vibrant));
+        color: hsl(var(--peach-vibrant-foreground));
+    }
+
+    .text-peach-vibrant {
+        color: hsl(var(--peach-vibrant));
+    }
+
+    .border-peach-vibrant {
+        border-color: hsl(var(--peach-vibrant));
+    }
+
+    .shadow-peach-vibrant {
+        box-shadow: 0 0 20px hsl(var(--peach-vibrant) / 0.4);
+    }
+
+    .gradient-peach-vibrant {
+        background: linear-gradient(135deg, hsl(var(--peach-vibrant)), hsl(var(--peach-500)));
+    }
+}
+
+/* High Contrast Components */
+@layer components {
+    .card-contrast {
+        @apply bg-navy-900 border border-white/20 shadow-xl;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .card-sharp {
+        @apply bg-navy-900 shadow-xl relative;
+        border: 1px solid #ffffff;
+    }
+
+    .btn-vibrant {
+        @apply bg-peach-vibrant text-navy-900 font-bold hover:brightness-110 transition-all;
+        box-shadow: 0 4px 15px hsl(var(--peach-vibrant) / 0.4);
+    }
+
+    .btn-outline-sharp {
+        @apply border-2 border-white text-white font-bold hover:bg-white hover:text-navy-900 transition-all;
+    }
+
+    .divider-sharp {
+        @apply w-full h-px bg-white/50 my-4;
+    }
+}
+
+/* Neon/Glow Effects for Peach */
+@layer utilities {
+    .glow-text-peach {
+        text-shadow: 0 0 10px hsl(var(--peach-vibrant) / 0.6), 0 0 20px hsl(var(--peach-vibrant) / 0.4);
+    }
+
+    .glow-box-peach {
+        box-shadow: 0 0 15px hsl(var(--peach-vibrant) / 0.5), inset 0 0 10px hsl(var(--peach-vibrant) / 0.2);
+        border: 1px solid hsl(var(--peach-vibrant));
+    }
+}

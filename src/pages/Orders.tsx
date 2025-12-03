@@ -8,12 +8,21 @@ import {
   XCircle,
   Utensils,
   Calendar,
-  RefreshCw
+  RefreshCw,
+  FileText
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { useAuth } from '@/context/auth-context';
 import {
   getUserOrders,
@@ -193,6 +202,7 @@ const OrderCard = ({ order }: { order: Order }) => {
           <div className="flex justify-between items-start">
             <div className="flex-1">
               <h3 className="font-semibold text-lg">{order.restaurantName}</h3>
+              <p className="text-sm font-medium text-primary mb-1">Order #{order.orderNumber}</p>
               <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <Calendar className="w-4 h-4" />
@@ -283,11 +293,66 @@ const OrderCard = ({ order }: { order: Order }) => {
 
           <Separator className="my-4" />
 
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-muted-foreground">
-              {order.items.length} item{order.items.length !== 1 ? 's' : ''}
-            </span>
-            <span className="font-semibold text-lg">₹{order.totalAmount}</span>
+          <div className="flex justify-between items-center mt-4">
+            <div className="flex items-center gap-2">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <FileText className="w-4 h-4" />
+                    View Invoice
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Order Invoice</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-6">
+                    <div className="text-center border-b pb-4">
+                      <h3 className="font-bold text-xl">{order.restaurantName}</h3>
+                      <p className="text-sm text-muted-foreground">Order #{order.orderNumber}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(order.createdAt instanceof Date ? order.createdAt : (order.createdAt as any).toDate()).toLocaleString()}
+                      </p>
+                    </div>
+
+                    <div className="space-y-3">
+                      {order.items.map((item, idx) => (
+                        <div key={idx} className="flex justify-between text-sm">
+                          <span>{item.quantity}x {item.name}</span>
+                          <span>₹{item.unitPrice * item.quantity}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="border-t pt-4 space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Subtotal</span>
+                        <span>₹{order.pricing?.subtotal || order.totalAmount}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">GST (5%)</span>
+                        <span>₹{order.pricing?.taxes || Math.round((order.totalAmount || 0) * 0.05)}</span>
+                      </div>
+                      <div className="flex justify-between font-bold text-lg pt-2 border-t mt-2">
+                        <span>Total Paid</span>
+                        <span>₹{order.totalAmount}</span>
+                      </div>
+                    </div>
+
+                    <div className="text-center text-xs text-muted-foreground pt-4">
+                      <p>Thank you for dining with us!</p>
+                      <p>This is a computer generated invoice.</p>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+            <div className="flex flex-col items-end">
+              <span className="text-sm text-muted-foreground">
+                {order.items.length} item{order.items.length !== 1 ? 's' : ''}
+              </span>
+              <span className="font-semibold text-lg">₹{order.totalAmount}</span>
+            </div>
           </div>
 
           {order.notes && (

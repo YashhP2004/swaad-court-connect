@@ -37,52 +37,60 @@ export const RestaurantCard = ({ restaurant }: RestaurantCardProps) => {
 
   return (
     <motion.div
-      whileHover={{ y: -8, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)' }}
+      whileHover={{ y: -8, scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
-      transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
     >
       <Card
-        className="cursor-pointer overflow-hidden group rounded-xl hover:shadow-lg transition-shadow"
+        className="cursor-pointer overflow-hidden group border-0 shadow-lg hover:shadow-2xl transition-all duration-500 bg-navy-900 relative rounded-none"
         onClick={handleClick}
       >
-        <CardContent className="p-0 relative">
-          {/* Badges */}
-          {restaurant.discount && (
-            <Badge className="absolute top-3 left-3 bg-red-500 z-10">
-              {restaurant.discount}
-            </Badge>
-          )}
-          {restaurant.isPopular && (
-            <Badge className="absolute top-3 right-3 bg-yellow-500 z-10">
-              Popular
-            </Badge>
-          )}
+        <CardContent className="p-0 relative h-full">
+          {/* Badges Container */}
+          <div className="absolute top-0 left-0 right-0 z-20 flex justify-between items-start pointer-events-none p-3">
+            {restaurant.discount ? (
+              <Badge className="bg-red-600 text-white border-0 shadow-lg animate-in fade-in zoom-in duration-300 rounded-none font-bold uppercase tracking-wider">
+                {restaurant.discount}
+              </Badge>
+            ) : <div />}
 
-          {/* Image */}
-          <div className="relative overflow-hidden">
+            {restaurant.isPopular && (
+              <Badge className="bg-peach-500 text-navy-950 font-bold border-0 shadow-lg shadow-peach-500/20 animate-pulse-slow rounded-none uppercase tracking-wider">
+                Popular
+              </Badge>
+            )}
+          </div>
+
+          {/* Image Container */}
+          <div className="relative h-64 overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-t from-navy-900 via-navy-900/40 to-transparent z-10" />
             <img
               src={restaurant.image || '/placeholder-restaurant.jpg'}
               alt={restaurant.name}
-              className="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-110"
+              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
             />
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-              <h3 className="text-white font-semibold text-lg mb-1">{restaurant.name}</h3>
 
-              {/* Info Row - Only Star Rating */}
-              <div className="flex items-center gap-2 text-white text-sm mb-2">
-                <div className="flex items-center gap-1">
+            {/* Content Overlay */}
+            <div className="absolute bottom-0 left-0 right-0 p-5 z-20 transform transition-transform duration-300">
+              <div className="flex justify-between items-end mb-2">
+                <h3 className="text-white font-heading font-bold text-2xl tracking-tight text-shadow-sm group-hover:text-peach-400 transition-colors duration-300">
+                  {restaurant.name}
+                </h3>
+                <div className="flex items-center gap-1 bg-black/60 backdrop-blur-md px-2 py-1 border border-white/10">
                   <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-                  <span>{restaurant.rating?.toFixed(1) || '4.0'}</span>
+                  <span className="text-white font-bold text-sm">{restaurant.rating?.toFixed(1) || '4.0'}</span>
                 </div>
               </div>
 
-              {/* Demand Badge */}
-              <div className="mb-2">
+              {/* Demand & Wait Time */}
+              <div className="mb-4 flex items-center gap-3">
                 <DemandBadge
                   level={demandLevel}
                   waitTime={waitTime}
                   size="sm"
-                  className="bg-black/40 backdrop-blur-sm"
+                  className="bg-white/10 backdrop-blur-md border-white/10 shadow-sm rounded-none"
                 />
               </div>
 
@@ -90,13 +98,22 @@ export const RestaurantCard = ({ restaurant }: RestaurantCardProps) => {
               <div className="flex gap-2 flex-wrap">
                 {Array.isArray(restaurant.cuisine) ? (
                   restaurant.cuisine.slice(0, 3).map((type, index) => (
-                    <Badge key={index} variant="outline" className="text-white border-white text-xs">
+                    <Badge
+                      key={index}
+                      variant="outline"
+                      className="bg-white/5 backdrop-blur-sm border-white/20 text-gray-200 text-xs hover:bg-white/10 transition-colors rounded-none"
+                    >
                       {type}
                     </Badge>
                   ))
                 ) : (
-                  <Badge variant="outline" className="text-white border-white text-xs">
+                  <Badge variant="outline" className="bg-white/5 backdrop-blur-sm border-white/20 text-gray-200 text-xs rounded-none">
                     {restaurant.cuisine}
+                  </Badge>
+                )}
+                {Array.isArray(restaurant.cuisine) && restaurant.cuisine.length > 3 && (
+                  <Badge variant="outline" className="bg-white/5 backdrop-blur-sm border-white/20 text-gray-200 text-xs rounded-none">
+                    +{restaurant.cuisine.length - 3}
                   </Badge>
                 )}
               </div>

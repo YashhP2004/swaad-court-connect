@@ -333,7 +333,7 @@ const DashboardOverview = ({
                             </div>
                             <div>
                               <div className="flex items-center gap-2 mb-1">
-                                <h4 className="font-bold text-gray-900">#{order.id.slice(-6)}</h4>
+                                <h4 className="font-bold text-gray-900">Order #{order.orderNumber || order.id.slice(-6)}</h4>
                                 <Badge variant={
                                   order.status === 'pending' ? 'destructive' :
                                     order.status === 'completed' ? 'default' : 'secondary'
@@ -341,7 +341,7 @@ const DashboardOverview = ({
                                   {order.status}
                                 </Badge>
                               </div>
-                              <p className="text-sm text-gray-600 font-medium">{order.customerName || 'Guest Customer'}</p>
+                              <p className="text-sm text-gray-600 font-medium">{order.userDetails?.name || order.customerName || 'Guest Customer'}</p>
                               <p className="text-xs text-gray-500 mt-1">
                                 {order.items?.length || 0} items • ₹{order.totalAmount || 0}
                               </p>
@@ -426,46 +426,46 @@ const DashboardOverview = ({
               <Package className="w-5 h-5 text-gray-500" />
               Quick Actions
             </h3>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-4">
               <Button
                 variant="outline"
-                className="h-auto py-4 flex flex-col gap-2 bg-white hover:bg-orange-50 hover:border-orange-200 hover:text-orange-600 transition-all shadow-sm"
+                className="h-auto py-4 flex flex-col gap-3 bg-white border-orange-200 hover:border-orange-500 hover:bg-orange-50 text-gray-700 hover:text-orange-700 transition-all shadow-sm hover:shadow-md group"
                 onClick={() => onTabChange('menu')}
               >
-                <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
-                  <Plus className="w-5 h-5 text-orange-600" />
+                <div className="w-12 h-12 rounded-full bg-orange-100 group-hover:bg-orange-200 flex items-center justify-center transition-colors">
+                  <Plus className="w-6 h-6 text-orange-600" />
                 </div>
-                <span className="text-xs font-medium">Add Item</span>
+                <span className="text-sm font-bold">Add Item</span>
               </Button>
               <Button
                 variant="outline"
-                className="h-auto py-4 flex flex-col gap-2 bg-white hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition-all shadow-sm"
+                className="h-auto py-4 flex flex-col gap-3 bg-white border-blue-200 hover:border-blue-500 hover:bg-blue-50 text-gray-700 hover:text-blue-700 transition-all shadow-sm hover:shadow-md group"
                 onClick={() => onTabChange('analytics')}
               >
-                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                  <BarChart3 className="w-5 h-5 text-blue-600" />
+                <div className="w-12 h-12 rounded-full bg-blue-100 group-hover:bg-blue-200 flex items-center justify-center transition-colors">
+                  <BarChart3 className="w-6 h-6 text-blue-600" />
                 </div>
-                <span className="text-xs font-medium">Analytics</span>
+                <span className="text-sm font-bold">Analytics</span>
               </Button>
               <Button
                 variant="outline"
-                className="h-auto py-4 flex flex-col gap-2 bg-white hover:bg-purple-50 hover:border-purple-200 hover:text-purple-600 transition-all shadow-sm"
+                className="h-auto py-4 flex flex-col gap-3 bg-white border-purple-200 hover:border-purple-500 hover:bg-purple-50 text-gray-700 hover:text-purple-700 transition-all shadow-sm hover:shadow-md group"
                 onClick={() => onTabChange('settings')}
               >
-                <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
-                  <Clock className="w-5 h-5 text-purple-600" />
+                <div className="w-12 h-12 rounded-full bg-purple-100 group-hover:bg-purple-200 flex items-center justify-center transition-colors">
+                  <Clock className="w-6 h-6 text-purple-600" />
                 </div>
-                <span className="text-xs font-medium">Hours</span>
+                <span className="text-sm font-bold">Hours</span>
               </Button>
               <Button
                 variant="outline"
-                className="h-auto py-4 flex flex-col gap-2 bg-white hover:bg-green-50 hover:border-green-200 hover:text-green-600 transition-all shadow-sm"
+                className="h-auto py-4 flex flex-col gap-3 bg-white border-green-200 hover:border-green-500 hover:bg-green-50 text-gray-700 hover:text-green-700 transition-all shadow-sm hover:shadow-md group"
                 onClick={() => onTabChange('billing')}
               >
-                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                  <CreditCard className="w-5 h-5 text-green-600" />
+                <div className="w-12 h-12 rounded-full bg-green-100 group-hover:bg-green-200 flex items-center justify-center transition-colors">
+                  <CreditCard className="w-6 h-6 text-green-600" />
                 </div>
-                <span className="text-xs font-medium">Payouts</span>
+                <span className="text-sm font-bold">Payouts</span>
               </Button>
             </div>
           </div>

@@ -1,6 +1,11 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Import Enhanced Visual Polish */
+@import './theme-enhancements.css';
+@import './peach-contrast.css';
 
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
 All colors MUST be HSL.
@@ -8,152 +13,225 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Warm, appetizing color palette for Swaadcourt */
-    --background: 45 15% 98%;
-    --foreground: 15 25% 15%;
+    /* Dark Navy + Peach Theme - Light Mode */
+    --background: 210 25% 96%;
+    --foreground: 210 15% 20%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 15 25% 15%;
+    --card: 210 20% 98%;
+    --card-foreground: 210 15% 20%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 15 25% 15%;
+    --popover: 210 20% 98%;
+    --popover-foreground: 210 15% 20%;
 
-    /* Primary: Warm Orange */
-    --primary: 25 85% 55%;
-    --primary-foreground: 0 0% 98%;
-    --primary-glow: 25 90% 65%;
+    /* Primary: Warm Peach */
+    --primary: 20 100% 77%;
+    /* #FFB48F */
+    --primary-foreground: 210 50% 8%;
+    /* Navy text on peach */
+    --primary-glow: 20 100% 82%;
 
-    /* Secondary: Soft Red */
-    --secondary: 5 75% 60%;
-    --secondary-foreground: 0 0% 98%;
+    /* Secondary: Navy accent */
+    --secondary: 210 65% 20%;
+    /* Navy-700 */
+    --secondary-foreground: 210 15% 96%;
 
-    /* Muted: Warm Cream */
-    --muted: 45 20% 95%;
-    --muted-foreground: 15 15% 45%;
+    /* Muted: Soft gray-blue */
+    --muted: 210 20% 92%;
+    --muted-foreground: 210 10% 55%;
 
-    /* Accent: Golden Yellow */
-    --accent: 45 90% 65%;
-    --accent-foreground: 15 25% 15%;
+    /* Accent: Peach variant */
+    --accent: 20 100% 88%;
+    /* Peach-300 */
+    --accent-foreground: 210 50% 8%;
 
     /* Success: Fresh Green */
-    --success: 120 45% 50%;
-    --success-foreground: 0 0% 98%;
+    --success: 145 50% 65%;
+    /* #7ED38F */
+    --success-foreground: 210 15% 96%;
 
-    /* Warning: Vibrant Orange */
-    --warning: 35 85% 60%;
-    --warning-foreground: 0 0% 98%;
+    /* Warning: Warm Orange */
+    --warning: 25 100% 65%;
+    /* #FFB84D */
+    --warning-foreground: 210 50% 8%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 70% 65%;
+    /* #FF6B6B */
+    --destructive-foreground: 210 15% 96%;
 
-    --border: 45 25% 90%;
-    --input: 45 25% 90%;
-    --ring: 25 85% 55%;
+    --border: 210 20% 88%;
+    --input: 210 20% 88%;
+    --ring: 20 100% 77%;
+    /* Peach ring */
 
-    /* Food-specific colors */
-    --veg: 120 60% 45%;
-    --non-veg: 0 70% 55%;
-    --spicy: 15 85% 55%;
+    /* Navy color variants */
+    --navy-900: 210 60% 8%;
+    /* #071828 */
+    --navy-800: 210 60% 14%;
+    /* #0B2A3B */
+    --navy-700: 210 65% 20%;
+    /* #123E52 */
+
+    /* Peach color variants */
+    --peach-300: 20 100% 88%;
+    /* #FFDCC8 */
+    --peach-500: 20 100% 77%;
+    /* #FFB48F */
+    --peach-600: 20 75% 65%;
+    /* #E68A66 */
+
+    /* Extended Navy Scale */
+    --navy-50: 210 25% 98%;
+    --navy-100: 210 25% 96%;
+    --navy-200: 210 25% 90%;
+    --navy-300: 210 25% 80%;
+    --navy-400: 210 25% 60%;
+    --navy-500: 210 30% 40%;
+    --navy-600: 210 40% 30%;
+    --navy-700: 210 65% 20%;
+    --navy-800: 210 60% 14%;
+    --navy-900: 210 60% 8%;
+    --navy-950: 210 60% 5%;
+
+    /* Extended Peach Scale */
+    --peach-50: 20 100% 98%;
+    --peach-100: 20 100% 95%;
+    --peach-200: 20 100% 90%;
+    --peach-300: 20 100% 88%;
+    --peach-400: 20 100% 82%;
+    --peach-500: 20 100% 77%;
+    --peach-600: 20 75% 65%;
+    --peach-700: 20 70% 55%;
+    --peach-800: 20 65% 45%;
+    --peach-900: 20 60% 35%;
+    --peach-950: 20 60% 25%;
+
+    /* Complementary Accents */
+    --accent-teal: 170 70% 50%;
+    --accent-gold: 45 90% 60%;
+    --accent-purple: 270 60% 60%;
+
+    /* Typography */
+    --font-heading: 'Outfit', sans-serif;
+    --font-body: 'Plus Jakarta Sans', sans-serif;
 
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
     --gradient-warm: linear-gradient(180deg, hsl(var(--accent) / 0.1), hsl(var(--primary) / 0.05));
-    --gradient-food: linear-gradient(45deg, hsl(var(--secondary)), hsl(var(--accent)));
+    --gradient-food: linear-gradient(45deg, hsl(var(--peach-600)), hsl(var(--accent)));
 
     /* Shadows */
-    --shadow-warm: 0 4px 20px hsl(var(--primary) / 0.1);
-    --shadow-glow: 0 0 30px hsl(var(--primary-glow) / 0.3);
-    --shadow-food: 0 8px 32px hsl(var(--secondary) / 0.15);
+    --shadow-warm: 0 4px 20px hsl(var(--primary) / 0.15);
+    --shadow-glow: 0 0 30px hsl(var(--primary-glow) / 0.25);
+    --shadow-food: 0 8px 32px hsl(var(--primary) / 0.2);
 
     /* Animation values */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
     --transition-food: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
 
-    --radius: 0.75rem;
+    --radius: 0.5rem;
 
-    --sidebar-background: 0 0% 98%;
+    --sidebar-background: 210 20% 98%;
+    --sidebar-foreground: 210 15% 20%;
+    --sidebar-primary: 210 60% 8%;
+    --sidebar-primary-foreground: 210 15% 96%;
+    --sidebar-accent: 210 20% 94%;
+    --sidebar-accent-foreground: 210 15% 20%;
+    --sidebar-border: 210 20% 88%;
+    --sidebar-ring: 20 100% 77%;
 
-    --sidebar-foreground: 240 5.3% 26.1%;
+    /* Vibrant Peach */
+    --peach-vibrant: 20 100% 65%;
+    --peach-vibrant-foreground: 210 60% 8%;
 
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Sharp Contrast */
+    --border-sharp: 0 0% 100%;
+    --border-contrast: 210 20% 95%;
   }
 
   .dark {
-    /* Dark mode with warm undertones */
-    --background: 15 20% 8%;
-    --foreground: 45 15% 92%;
+    /* Dark Navy + Peach Theme - Dark Mode */
+    --background: 210 60% 8%;
+    /* #071828 - Navy-900 */
+    --foreground: 210 15% 96%;
+    /* #F6F7F8 - Off-white */
 
-    --card: 15 18% 12%;
-    --card-foreground: 45 15% 92%;
+    --card: 210 60% 14%;
+    /* #0B2A3B - Navy-800 */
+    --card-foreground: 210 15% 96%;
 
-    --popover: 15 18% 12%;
-    --popover-foreground: 45 15% 92%;
+    --popover: 210 60% 14%;
+    /* Navy-800 */
+    --popover-foreground: 210 15% 96%;
 
-    /* Primary: Bright Orange for dark mode */
-    --primary: 25 85% 60%;
-    --primary-foreground: 15 20% 8%;
-    --primary-glow: 25 90% 70%;
+    /* Primary: Warm Peach */
+    --primary: 20 100% 77%;
+    /* #FFB48F */
+    --primary-foreground: 210 60% 8%;
+    /* Navy text on peach */
+    --primary-glow: 20 100% 82%;
 
-    /* Secondary: Warm Red */
-    --secondary: 5 70% 55%;
-    --secondary-foreground: 45 15% 92%;
+    /* Secondary: Lighter Navy */
+    --secondary: 210 65% 20%;
+    /* Navy-700 */
+    --secondary-foreground: 210 15% 96%;
 
-    /* Muted: Dark warm */
-    --muted: 15 15% 18%;
-    --muted-foreground: 45 10% 65%;
+    /* Muted: Dark navy with subtle warmth */
+    --muted: 210 50% 18%;
+    --muted-foreground: 210 10% 75%;
+    /* #B8C7CF */
 
-    /* Accent: Golden */
-    --accent: 45 85% 60%;
-    --accent-foreground: 15 20% 8%;
+    /* Accent: Peach variant */
+    --accent: 20 100% 88%;
+    /* Peach-300 */
+    --accent-foreground: 210 60% 8%;
 
     /* Success: Green */
-    --success: 120 40% 55%;
-    --success-foreground: 45 15% 92%;
+    --success: 145 50% 65%;
+    /* #7ED38F */
+    --success-foreground: 210 15% 96%;
 
     /* Warning: Orange */
-    --warning: 35 80% 65%;
-    --warning-foreground: 15 20% 8%;
+    --warning: 35 100% 65%;
+    /* #FFB84D */
+    --warning-foreground: 210 60% 8%;
 
-    --destructive: 0 75% 55%;
-    --destructive-foreground: 45 15% 92%;
+    --destructive: 0 70% 65%;
+    /* #FF6B6B */
+    --destructive-foreground: 210 15% 96%;
 
-    --border: 15 15% 22%;
-    --input: 15 15% 22%;
-    --ring: 25 85% 60%;
+    --border: 210 40% 22%;
+    --input: 210 40% 22%;
+    --ring: 20 100% 77%;
+    /* Peach ring */
 
-    /* Food-specific colors for dark mode */
-    --veg: 120 55% 50%;
-    --non-veg: 0 65% 60%;
-    --spicy: 15 80% 60%;
+    /* Navy variants (same as light mode) */
+    --navy-900: 210 60% 8%;
+    --navy-800: 210 60% 14%;
+    --navy-700: 210 65% 20%;
+
+    /* Peach variants (same as light mode) */
+    --peach-300: 20 100% 88%;
+    --peach-500: 20 100% 77%;
+    --peach-600: 20 75% 65%;
 
     /* Dark mode gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
     --gradient-warm: linear-gradient(180deg, hsl(var(--accent) / 0.15), hsl(var(--primary) / 0.08));
-    --gradient-food: linear-gradient(45deg, hsl(var(--secondary)), hsl(var(--accent)));
+    --gradient-food: linear-gradient(45deg, hsl(var(--peach-600)), hsl(var(--accent)));
 
     /* Dark mode shadows */
-    --shadow-warm: 0 4px 20px hsl(var(--primary) / 0.2);
-    --shadow-glow: 0 0 30px hsl(var(--primary-glow) / 0.4);
-    --shadow-food: 0 8px 32px hsl(var(--secondary) / 0.25);
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --shadow-warm: 0 4px 20px hsl(var(--primary) / 0.25);
+    --shadow-glow: 0 0 30px hsl(var(--primary-glow) / 0.35);
+    --shadow-food: 0 8px 32px hsl(var(--primary) / 0.3);
+    --sidebar-background: 210 60% 8%;
+    --sidebar-foreground: 210 15% 96%;
+    --sidebar-primary: 20 100% 77%;
+    --sidebar-primary-foreground: 210 60% 8%;
+    --sidebar-accent: 210 60% 14%;
+    --sidebar-accent-foreground: 210 15% 96%;
+    --sidebar-border: 210 40% 22%;
+    --sidebar-ring: 20 100% 77%;
   }
 }
 
@@ -169,6 +247,7 @@ All colors MUST be HSL.
 
 /* Food-inspired animations and utilities */
 @layer utilities {
+
   /* Food loading animations */
   .food-pulse {
     animation: food-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
@@ -219,7 +298,7 @@ All colors MUST be HSL.
     @apply hover:shadow-[0_8px_25px_hsl(var(--primary)/0.3)] hover:-translate-y-1;
   }
 
-  .btn-food > * {
+  .btn-food>* {
     @apply relative z-10;
   }
 
@@ -335,10 +414,13 @@ All colors MUST be HSL.
 
 /* Keyframes for all food-inspired animations */
 @keyframes food-pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
     transform: scale(1);
   }
+
   50% {
     opacity: 0.8;
     transform: scale(1.05);
@@ -346,27 +428,40 @@ All colors MUST be HSL.
 }
 
 @keyframes food-bounce {
-  0%, 20%, 53%, 80%, 100% {
+
+  0%,
+  20%,
+  53%,
+  80%,
+  100% {
     transform: translate3d(0, 0, 0);
   }
-  40%, 43% {
+
+  40%,
+  43% {
     transform: translate3d(0, -8px, 0);
   }
+
   70% {
     transform: translate3d(0, -4px, 0);
   }
+
   90% {
     transform: translate3d(0, -2px, 0);
   }
 }
 
 @keyframes food-sizzle {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateX(0);
   }
+
   25% {
     transform: translateX(-2px);
   }
+
   75% {
     transform: translateX(2px);
   }
@@ -377,10 +472,12 @@ All colors MUST be HSL.
     opacity: 0.8;
     transform: translateY(0) scale(1);
   }
+
   50% {
     opacity: 0.4;
     transform: translateY(-20px) scale(1.1);
   }
+
   100% {
     opacity: 0;
     transform: translateY(-40px) scale(1.2);
@@ -391,9 +488,11 @@ All colors MUST be HSL.
   0% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.2);
   }
+
   100% {
     transform: scale(1);
   }
@@ -404,10 +503,12 @@ All colors MUST be HSL.
     transform: scale(0) rotate(0deg);
     opacity: 0;
   }
+
   50% {
     transform: scale(1.1) rotate(180deg);
     opacity: 1;
   }
+
   100% {
     transform: scale(1) rotate(360deg);
     opacity: 1;
@@ -418,6 +519,7 @@ All colors MUST be HSL.
   0% {
     background-position: -200% 0;
   }
+
   100% {
     background-position: 200% 0;
   }
@@ -427,15 +529,19 @@ All colors MUST be HSL.
   0% {
     transform: rotate(0deg);
   }
+
   25% {
     transform: rotate(90deg) scale(1.1);
   }
+
   50% {
     transform: rotate(180deg);
   }
+
   75% {
     transform: rotate(270deg) scale(1.1);
   }
+
   100% {
     transform: rotate(360deg);
   }
@@ -446,10 +552,12 @@ All colors MUST be HSL.
     transform: translateY(-20px) scale(0.8);
     opacity: 0;
   }
+
   50% {
     transform: translateY(0) scale(1.1);
     opacity: 1;
   }
+
   100% {
     transform: translateY(10px) scale(1);
     opacity: 0.8;
@@ -461,6 +569,7 @@ All colors MUST be HSL.
     opacity: 0;
     transform: translateY(20px) scale(0.95);
   }
+
   100% {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -472,6 +581,7 @@ All colors MUST be HSL.
     opacity: 1;
     transform: translateY(0) scale(1);
   }
+
   100% {
     opacity: 0;
     transform: translateY(-20px) scale(0.95);
@@ -482,21 +592,27 @@ All colors MUST be HSL.
   0% {
     background-position: 0% 50%;
   }
+
   50% {
     background-position: 100% 50%;
   }
+
   100% {
     background-position: 0% 50%;
   }
 }
 
 @keyframes category-float {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0) rotate(0deg);
   }
+
   33% {
     transform: translateY(-10px) rotate(1deg);
   }
+
   66% {
     transform: translateY(-5px) rotate(-1deg);
   }
@@ -506,12 +622,15 @@ All colors MUST be HSL.
   0% {
     transform: scale(0);
   }
+
   50% {
     transform: scale(1.2);
   }
+
   75% {
     transform: scale(0.9);
   }
+
   100% {
     transform: scale(1);
   }
@@ -522,6 +641,7 @@ All colors MUST be HSL.
     opacity: 0;
     transform: translateY(20px);
   }
+
   100% {
     opacity: 1;
     transform: translateY(0);
@@ -529,9 +649,12 @@ All colors MUST be HSL.
 }
 
 @keyframes float {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0px);
   }
+
   50% {
     transform: translateY(-20px);
   }
