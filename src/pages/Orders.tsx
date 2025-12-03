@@ -104,6 +104,7 @@ const OrderItemsList = ({ items }: { items: OrderItem[] }) => (
 );
 
 const OrderCard = ({ order }: { order: Order }) => {
+  const { user } = useAuth();
   const [otpTimeRemaining, setOtpTimeRemaining] = React.useState<{ minutes: number; seconds: number; isExpired: boolean } | null>(null);
   const [isRegeneratingOtp, setIsRegeneratingOtp] = React.useState(false);
 
