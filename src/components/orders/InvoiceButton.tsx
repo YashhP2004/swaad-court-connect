@@ -41,8 +41,6 @@ export function InvoiceButton({
         }
     };
 
-    console.log('InvoiceButton rendering for order:', order.id, 'Status:', order.status);
-
     return (
         <Button
             variant={variant}

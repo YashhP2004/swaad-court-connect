@@ -115,14 +115,54 @@ export async function generateInvoicePDF(
     yPos = yPos - (userDetails?.email && userDetails?.phone ? 17 : userDetails?.email || userDetails?.phone ? 12 : 7);
     doc.setFontSize(9);
     doc.setTextColor(...theme.textDark);
-    doc.text(`Order ID: ${order.id}`, pageWidth - 15, yPos, { align: 'right' });
+    const displayOrderNumber = order.orderNumber ? `#${order.orderNumber}` : `#${order.id.slice(-6).toUpperCase()}`;
+    doc.text(`Order No: ${displayOrderNumber}`, pageWidth - 15, yPos, { align: 'right' });
     yPos += 5;
     doc.text(`Restaurant: ${order.restaurantName}`, pageWidth - 15, yPos, { align: 'right' });
-    yPos += 5;
-    doc.text(`Payment: ${order.payment?.method || 'Cash'}`, pageWidth - 15, yPos, { align: 'right' });
+
+    // ========== TRANSACTION DETAILS ==========
+    yPos += 15;
+
+    // Transaction Details Section
+    doc.setFontSize(11);
+    doc.setTextColor(...theme.secondaryColor);
+    doc.setFont('helvetica', 'bold');
+    doc.text('TRANSACTION DETAILS:', 15, yPos);
+    yPos += 8;
+
+    // Transaction details table data
+    const transactionData = [
+        ['Payment Method', order.payment?.method || 'Cash'],
+        ['Payment Status', order.payment?.status || 'Pending'],
+        ['Transaction ID', order.payment?.transactionId || order.paymentId || 'N/A'],
+        ['Order ID', order.id]
+    ];
+
+    autoTable(doc, {
+        startY: yPos,
+        body: transactionData,
+        theme: 'plain',
+        styles: {
+            fontSize: 9,
+            cellPadding: 2
+        },
+        columnStyles: {
+            0: {
+                cellWidth: 40,
+                fontStyle: 'bold',
+                textColor: theme.textDark
+            },
+            1: {
+                cellWidth: 140,
+                textColor: theme.textLight
+            }
+        },
+        margin: { left: 15, right: 15 }
+    });
+
+    yPos = (doc as any).lastAutoTable.finalY + 10;
 
     // ========== ITEMS TABLE ==========
-    yPos += 15;
 
     const tableData = order.items.map((item: OrderItem) => [
         item.name,
