@@ -69,16 +69,23 @@ export default function Checkout() {
               },
               restaurantId: items[0]?.restaurantId || 'swaad_court_main',
               restaurantName: items[0]?.restaurantName || 'Swaad Court',
-              items: items.map(item => ({
-                id: item.id,
-                name: item.name,
-                quantity: item.quantity,
-                unitPrice: item.price,
-                totalPrice: item.totalPrice,
-                image: item.image,
-                restaurantId: item.restaurantId,
-                restaurantName: item.restaurantName
-              })),
+              items: items.map(item => {
+                // Filter out undefined values from each item
+                const itemData: any = {
+                  id: item.id,
+                  name: item.name,
+                  quantity: item.quantity,
+                  unitPrice: item.price,
+                  totalPrice: item.totalPrice,
+                };
+
+                // Only add optional fields if they exist
+                if (item.image) itemData.image = item.image;
+                if (item.restaurantId) itemData.restaurantId = item.restaurantId;
+                if (item.restaurantName) itemData.restaurantName = item.restaurantName;
+
+                return itemData;
+              }),
               pricing: {
                 subtotal: totalAmount,
                 taxes: parseFloat(taxes),
