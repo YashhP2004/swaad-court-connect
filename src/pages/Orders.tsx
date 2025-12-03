@@ -34,6 +34,7 @@ import {
 } from '@/lib/firebase';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
+import { InvoiceButton } from '@/components/orders/InvoiceButton';
 
 const EmptyState = ({ type }: { type: 'ongoing' | 'past' }) => (
   <motion.div
@@ -346,6 +347,18 @@ const OrderCard = ({ order }: { order: Order }) => {
                   </div>
                 </DialogContent>
               </Dialog>
+
+              {/* Download Invoice Button */}
+              <InvoiceButton
+                order={order}
+                userDetails={{
+                  name: user?.displayName || user?.name || 'Customer',
+                  email: user?.email,
+                  phone: user?.phone
+                }}
+                variant="outline"
+                size="sm"
+              />
             </div>
             <div className="flex flex-col items-end">
               <span className="text-sm text-muted-foreground">

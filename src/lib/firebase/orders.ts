@@ -17,6 +17,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './config';
 import { Order, OrderStatus, VendorOrderStatus } from '../types';
+import { generatePickupOTP, createPickupOTPData } from './pickupOtp';
 
 // Order Management Functions
 export async function createOrder(orderData: Partial<Order>): Promise<string> {
@@ -318,7 +319,6 @@ export async function updateOrderStatus(orderId: string, status: VendorOrderStat
 
         // Generate OTP when order is marked as ready
         if (status === 'ready') {
-            const { generatePickupOTP, createPickupOTPData } = await import('./pickupOtp');
             const otp = generatePickupOTP();
             const otpData = await createPickupOTPData(otp);
             updateData.pickupOTP = otpData;
