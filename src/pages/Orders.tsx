@@ -353,7 +353,7 @@ const OrderCard = ({ order }: { order: Order }) => {
               <InvoiceButton
                 order={order}
                 userDetails={{
-                  name: user?.displayName || user?.name || 'Customer',
+                  name: user?.name || 'Customer',
                   email: user?.email,
                   phone: user?.phone
                 }}
