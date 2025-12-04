@@ -337,17 +337,17 @@ export default function PaymentsTransactions() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Payments & Transactions</h2>
-          <p className="text-gray-600">Monitor financial transactions and manage payouts</p>
+          <h2 className="text-xl md:text-2xl font-bold text-gray-900">Payments & Transactions</h2>
+          <p className="text-sm md:text-base text-gray-600">Monitor financial transactions and manage payouts</p>
         </div>
 
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={loadData} className="gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full md:w-auto">
+          <Button variant="outline" onClick={loadData} className="gap-2 w-full sm:w-auto">
             <RefreshCw className="w-4 h-4" />
             Refresh
           </Button>
           <Button
-            className="gap-2 bg-orange-600 hover:bg-orange-700"
+            className="gap-2 bg-orange-600 hover:bg-orange-700 w-full sm:w-auto"
             onClick={() => setShowGeneratePayoutDialog(true)}
           >
             <Send className="w-4 h-4" />
@@ -357,20 +357,20 @@ export default function PaymentsTransactions() {
       </div>
 
       {/* Stats Cards - Clickable */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <Card
           className="border-0 shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
           onClick={() => handleMetricCardClick('revenue')}
         >
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-white/70 mb-1">Total Revenue</p>
-                <p className="text-2xl font-bold text-green-600">₹{stats.totalRevenue.toLocaleString()}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs md:text-sm text-white/70 mb-1">Total Revenue</p>
+                <p className="text-xl md:text-2xl font-bold text-green-600 truncate">₹{stats.totalRevenue.toLocaleString()}</p>
                 <p className="text-xs text-gray-500 mt-1">Click to view details</p>
               </div>
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-green-600" />
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <TrendingUp className="w-5 h-5 md:w-6 md:h-6 text-green-600" />
               </div>
             </div>
           </CardContent>
@@ -380,15 +380,15 @@ export default function PaymentsTransactions() {
           className="border-0 shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
           onClick={() => handleMetricCardClick('refunds')}
         >
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-white/70 mb-1">Total Refunds</p>
-                <p className="text-2xl font-bold text-red-600">₹{stats.totalRefunds.toLocaleString()}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs md:text-sm text-white/70 mb-1">Total Refunds</p>
+                <p className="text-xl md:text-2xl font-bold text-red-600 truncate">₹{stats.totalRefunds.toLocaleString()}</p>
                 <p className="text-xs text-gray-500 mt-1">Click to view details</p>
               </div>
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                <ArrowUpRight className="w-6 h-6 text-red-600" />
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <ArrowUpRight className="w-5 h-5 md:w-6 md:h-6 text-red-600" />
               </div>
             </div>
           </CardContent>
@@ -398,15 +398,15 @@ export default function PaymentsTransactions() {
           className="border-0 shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
           onClick={() => handleMetricCardClick('commission')}
         >
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-white/70 mb-1">Commission Earned</p>
-                <p className="text-2xl font-bold text-purple-600">₹{stats.totalCommission.toLocaleString()}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs md:text-sm text-white/70 mb-1">Commission Earned</p>
+                <p className="text-xl md:text-2xl font-bold text-purple-600 truncate">₹{stats.totalCommission.toLocaleString()}</p>
                 <p className="text-xs text-gray-500 mt-1">Click to view details</p>
               </div>
-              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                <DollarSign className="w-6 h-6 text-purple-600" />
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <DollarSign className="w-5 h-5 md:w-6 md:h-6 text-purple-600" />
               </div>
             </div>
           </CardContent>
@@ -416,15 +416,15 @@ export default function PaymentsTransactions() {
           className="border-0 shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
           onClick={() => handleMetricCardClick('pending')}
         >
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-white/70 mb-1">Pending Payouts</p>
-                <p className="text-2xl font-bold text-orange-600">₹{stats.pendingPayouts.toLocaleString()}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs md:text-sm text-white/70 mb-1">Pending Payouts</p>
+                <p className="text-xl md:text-2xl font-bold text-orange-600 truncate">₹{stats.pendingPayouts.toLocaleString()}</p>
                 <p className="text-xs text-gray-500 mt-1">Click for vendor breakdown</p>
               </div>
-              <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                <Wallet className="w-6 h-6 text-orange-600" />
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <Wallet className="w-5 h-5 md:w-6 md:h-6 text-orange-600" />
               </div>
             </div>
           </CardContent>
@@ -449,8 +449,8 @@ export default function PaymentsTransactions() {
 
       {/* Filters */}
       {activeTab === 'transactions' && (
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-          <div className="relative md:col-span-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 md:gap-4">
+          <div className="relative sm:col-span-2">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
               placeholder="Search by ID, customer, vendor..."
@@ -533,62 +533,64 @@ export default function PaymentsTransactions() {
                 transition={{ delay: index * 0.02 }}
               >
                 <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-6 flex-1">
-                        <div className="flex items-center gap-3">
+                  <CardContent className="p-4 md:p-6">
+                    <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 flex-1 w-full">
+                        <div className="flex items-center gap-3 w-full sm:w-auto">
                           {getTypeIcon(transaction.type)}
-                          <div>
-                            <h3 className="font-semibold text-lg">{transaction.orderNumber}</h3>
-                            <p className="text-sm text-gray-600">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-base md:text-lg truncate">{transaction.orderNumber}</h3>
+                            <p className="text-xs md:text-sm text-gray-600">
                               {transaction.createdAt.toLocaleDateString()} • {transaction.createdAt.toLocaleTimeString()}
                             </p>
                           </div>
                         </div>
 
                         <div className="hidden md:block">
-                          <div className="text-sm text-gray-500">Customer</div>
-                          <div className="font-medium">{transaction.customerName}</div>
+                          <div className="text-xs md:text-sm text-gray-500">Customer</div>
+                          <div className="font-medium text-sm md:text-base">{transaction.customerName}</div>
                         </div>
 
                         <div className="hidden md:block">
-                          <div className="text-sm text-gray-500">Vendor</div>
-                          <div className="font-medium">{transaction.restaurantName}</div>
-                        </div>
-
-                        <div className="hidden md:block">
-                          <div className="text-sm text-gray-500">Method</div>
-                          <div className="font-medium uppercase">{transaction.paymentMethod}</div>
+                          <div className="text-xs md:text-sm text-gray-500">Vendor</div>
+                          <div className="font-medium text-sm md:text-base truncate max-w-[150px]">{transaction.restaurantName}</div>
                         </div>
 
                         <div className="hidden lg:block">
-                          <div className="text-sm text-gray-500">Vendor Earnings</div>
+                          <div className="text-xs md:text-sm text-gray-500">Method</div>
+                          <div className="font-medium text-sm uppercase">{transaction.paymentMethod}</div>
+                        </div>
+
+                        <div className="hidden xl:block">
+                          <div className="text-xs md:text-sm text-gray-500">Vendor Earnings</div>
                           <div className="font-medium text-green-600">₹{transaction.vendorEarnings || 0}</div>
                         </div>
 
-                        <div className="hidden lg:block">
-                          <div className="text-sm text-gray-500">Payout Status</div>
+                        <div className="hidden xl:block">
+                          <div className="text-xs md:text-sm text-gray-500">Payout Status</div>
                           {getPayoutStatusBadge(transaction.payoutStatus)}
                         </div>
 
                         {transaction.payoutBatchId && (
-                          <div className="hidden xl:block">
-                            <div className="text-sm text-gray-500">Batch ID</div>
+                          <div className="hidden 2xl:block">
+                            <div className="text-xs md:text-sm text-gray-500">Batch ID</div>
                             <div className="font-mono text-xs">{transaction.payoutBatchId.slice(0, 8)}</div>
                           </div>
                         )}
                       </div>
 
-                      <div className="flex items-center gap-6">
-                        <div className="text-right">
-                          <div className={`text-2xl font-bold ${transaction.type === 'refund' ? 'text-red-600' : 'text-green-600'
-                            }`}>
-                            {transaction.type === 'refund' ? '-' : '+'}₹{transaction.amount.toLocaleString()}
+                      <div className="flex flex-row sm:flex-col lg:flex-row items-center justify-between sm:justify-end lg:justify-center gap-3 sm:gap-4 lg:gap-6 w-full sm:w-auto">
+                        <div className="flex items-center gap-2 sm:gap-4 flex-1 sm:flex-initial">
+                          <div className="text-right">
+                            <div className={`text-lg md:text-2xl font-bold ${transaction.type === 'refund' ? 'text-red-600' : 'text-green-600'
+                              }`}>
+                              {transaction.type === 'refund' ? '-' : '+'}₹{transaction.amount.toLocaleString()}
+                            </div>
+                            <div className="text-xs md:text-sm text-gray-600 truncate max-w-[120px]">{transaction.transactionId}</div>
                           </div>
-                          <div className="text-sm text-gray-600">{transaction.transactionId}</div>
-                        </div>
 
-                        <div>{getStatusBadge(transaction.status)}</div>
+                          <div>{getStatusBadge(transaction.status)}</div>
+                        </div>
 
                         <Button
                           variant="outline"
@@ -597,9 +599,10 @@ export default function PaymentsTransactions() {
                             setSelectedTransaction(transaction);
                             setShowDetailsDialog(true);
                           }}
+                          className="w-full sm:w-auto"
                         >
-                          <Eye className="w-4 h-4 mr-2" />
-                          Details
+                          <Eye className="w-4 h-4 sm:mr-2" />
+                          <span className="hidden sm:inline">Details</span>
                         </Button>
                       </div>
                     </div>

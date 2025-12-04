@@ -416,6 +416,16 @@ export default function Login() {
       </div>
 
       <div className="w-full max-w-md relative z-10">
+        {/* Back Button */}
+        <Button
+          variant="ghost"
+          onClick={() => navigate('/')}
+          className="mb-4 text-navy-700 dark:text-navy-300 hover:text-navy-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-navy-800/50"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back
+        </Button>
+
         {/* Logo and Title */}
         <div className="text-center mb-8 space-y-4 animate-food-bounce">
           <div className="inline-block animate-float">

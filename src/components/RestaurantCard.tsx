@@ -70,6 +70,17 @@ export const RestaurantCard = ({ restaurant }: RestaurantCardProps) => {
               src={restaurant.image || '/placeholder-restaurant.jpg'}
               alt={restaurant.name}
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+                const parent = target.parentElement;
+                if (parent && !parent.querySelector('.fallback-bg')) {
+                  const fallback = document.createElement('div');
+                  fallback.className = 'fallback-bg absolute inset-0 bg-gradient-to-br from-peach-500/20 to-navy-800 flex items-center justify-center';
+                  fallback.innerHTML = `<div class="text-6xl font-bold text-white/30">${restaurant.name.charAt(0)}</div>`;
+                  parent.insertBefore(fallback, parent.firstChild);
+                }
+              }}
             />
 
             {/* Content Overlay */}
