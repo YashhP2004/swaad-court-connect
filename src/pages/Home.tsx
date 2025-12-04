@@ -132,9 +132,9 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden max-w-[100vw]">
       {/* Hero Section */}
-      <div className="relative h-[400px] md:h-[500px] lg:h-[600px] w-full overflow-hidden">
+      <div className="relative h-[350px] sm:h-[400px] md:h-[500px] lg:h-[600px] w-full max-w-full overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-t from-navy-950 via-navy-900/60 to-transparent z-10" />
         <div className="absolute inset-0 bg-navy-950/30 z-10 mix-blend-multiply" />
         <img
@@ -144,16 +144,16 @@ export default function Home() {
         />
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center px-4 sm:px-6">
           <div className="animate-fade-in-up">
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-white mb-4 md:mb-6 tracking-tight drop-shadow-2xl">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold text-white mb-3 sm:mb-4 md:mb-6 tracking-tight drop-shadow-2xl">
               Swaad<span className="text-transparent bg-clip-text bg-gradient-to-r from-peach-400 to-peach-600">Court</span>
             </h1>
-            <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-100 mb-6 md:mb-10 max-w-2xl mx-auto font-medium drop-shadow-lg px-2">
+            <p className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl text-gray-100 mb-4 sm:mb-6 md:mb-10 max-w-2xl mx-auto font-medium drop-shadow-lg px-2">
               Experience the future of food court dining. <br className="hidden sm:block" />
               <span className="text-peach-200">Order from multiple restaurants in a single cart.</span>
             </p>
           </div>
 
-          <div className="w-full max-w-3xl relative group animate-fade-in-up delay-100">
+          <div className="w-full max-w-3xl relative group animate-fade-in-up delay-100 px-4">
             <div className="absolute inset-0 bg-peach-500/20 blur-2xl rounded-full group-hover:bg-peach-500/30 transition-all duration-500" />
             <form
               onSubmit={(e) => {
@@ -164,19 +164,19 @@ export default function Home() {
                   navigate(`/search?q=${encodeURIComponent(query)}`);
                 }
               }}
-              className="relative flex flex-col sm:flex-row items-center bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl sm:rounded-full p-2 sm:p-2 shadow-2xl hover:shadow-peach-500/10 hover:border-peach-500/30 transition-all duration-300 gap-2 sm:gap-0"
+              className="relative flex flex-col sm:flex-row items-center bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl sm:rounded-full p-2 shadow-2xl hover:shadow-peach-500/10 hover:border-peach-500/30 transition-all duration-300 gap-2 sm:gap-0"
             >
               <div className="flex items-center w-full sm:flex-1">
                 <Search className="w-5 h-5 sm:w-6 sm:h-6 text-peach-200 ml-3 sm:ml-4" />
                 <input
                   type="text"
                   placeholder="Search for restaurants, cuisines, or dishes..."
-                  className="flex-1 bg-transparent border-none focus:ring-0 text-white placeholder-gray-300 px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg outline-none"
+                  className="flex-1 bg-transparent border-none focus:ring-0 text-white placeholder-gray-300 px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base md:text-lg outline-none w-full"
                 />
               </div>
               <Button
                 type="submit"
-                className="w-full sm:w-auto rounded-full bg-gradient-to-r from-peach-500 to-peach-600 hover:from-peach-600 hover:to-peach-700 text-navy-950 font-bold px-6 sm:px-8 py-3 sm:py-6 text-base sm:text-lg shadow-lg shadow-peach-500/20 transition-all hover:scale-105"
+                className="w-full sm:w-auto rounded-full bg-gradient-to-r from-peach-500 to-peach-600 hover:from-peach-600 hover:to-peach-700 text-navy-950 font-bold px-6 sm:px-8 py-3 sm:py-6 text-sm sm:text-base md:text-lg shadow-lg shadow-peach-500/20 transition-all hover:scale-105"
               >
                 Search
               </Button>
@@ -185,7 +185,7 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-12 space-y-16">
+      <div className="container mx-auto px-3 sm:px-4 py-8 sm:py-10 md:py-12 space-y-12 sm:space-y-14 md:space-y-16 max-w-full overflow-x-hidden">
         {/* Trending Now Section */}
         <section>
           <div className="flex items-center justify-between mb-8">
@@ -193,14 +193,14 @@ export default function Home() {
               <div className="p-2 bg-peach-500/10 rounded-lg">
                 <TrendingUp className="w-6 h-6 text-peach-500" />
               </div>
-              <h2 className="text-2xl font-bold text-white">Trending Now</h2>
+              <h2 className="text-xl sm:text-2xl font-bold text-white">Trending Now</h2>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {trendingItems.map((item) => (
               <Card key={item.id} className="bg-navy-900 border-white/10 overflow-hidden hover:border-peach-500/50 hover:shadow-lg hover:shadow-peach-500/10 transition-all duration-300 group relative">
-                <div className="relative h-40 sm:h-48 md:h-52 overflow-hidden">
+                <div className="relative h-36 sm:h-40 md:h-48 lg:h-52 overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-t from-navy-900 via-transparent to-transparent z-10 opacity-60" />
                   <img
                     src={item.image || '/placeholder-food.jpg'}
@@ -220,10 +220,10 @@ export default function Home() {
                     <span className="text-xs font-bold text-white">{item.rating}</span>
                   </div>
                 </div>
-                <CardContent className="p-4 sm:p-5 relative">
+                <CardContent className="p-3 sm:p-4 md:p-5 relative">
                   <div className="mb-3">
                     <div className="flex justify-between items-start mb-1">
-                      <h3 className="text-lg font-bold text-white group-hover:text-peach-400 transition-colors line-clamp-1">
+                      <h3 className="text-base sm:text-lg font-bold text-white group-hover:text-peach-400 transition-colors line-clamp-1">
                         {item.name}
                       </h3>
                     </div>
@@ -239,7 +239,7 @@ export default function Home() {
                   <div className="flex items-center justify-between mt-auto pt-4 border-t border-white/5">
                     <div className="flex flex-col">
                       <span className="text-xs text-gray-500 font-medium uppercase tracking-wider">Price</span>
-                      <span className="text-xl font-bold text-peach-400">₹{item.price}</span>
+                      <span className="text-lg sm:text-xl font-bold text-peach-400">₹{item.price}</span>
                     </div>
                     <Button
                       size="sm"
@@ -262,7 +262,7 @@ export default function Home() {
               <div className="p-2 bg-peach-500/10 rounded-lg">
                 <Utensils className="w-6 h-6 text-peach-500" />
               </div>
-              <h2 className="text-2xl font-bold text-white">Popular Restaurants</h2>
+              <h2 className="text-xl sm:text-2xl font-bold text-white">Popular Restaurants</h2>
             </div>
             <div className="flex items-center gap-4">
               <VegNonVegToggle isVeg={isVegOnly} onToggle={() => setIsVegOnly(!isVegOnly)} />
@@ -274,7 +274,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 md:gap-6">
             {filteredRestaurants.map((restaurant) => (
               <Link key={restaurant.id} to={`/restaurant/${restaurant.id}`}>
                 <RestaurantCard restaurant={restaurant} />
@@ -289,12 +289,12 @@ export default function Home() {
           <div className="absolute inset-0 bg-navy-950/50 z-0" />
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-peach-500/5 rounded-full blur-3xl z-0" />
 
-          <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
+          <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
             <div className="flex flex-col items-center text-center p-6 md:p-8 bg-navy-900/50 backdrop-blur-md border border-white/5 hover:border-peach-500/50 hover:shadow-xl hover:shadow-peach-500/10 transition-all duration-300 group rounded-none">
               <div className="p-3 md:p-4 bg-navy-950 border border-white/10 group-hover:border-peach-500/30 transition-colors mb-4 md:mb-6 rounded-none shadow-lg">
                 <Utensils className="w-8 h-8 md:w-10 md:h-10 text-peach-500 group-hover:scale-110 transition-transform duration-300" />
               </div>
-              <h3 className="text-lg md:text-xl font-bold text-white mb-2 md:mb-3 group-hover:text-peach-400 transition-colors">Multi-Restaurant Ordering</h3>
+              <h3 className="text-base sm:text-lg md:text-xl font-bold text-white mb-2 md:mb-3 group-hover:text-peach-400 transition-colors">Multi-Restaurant Ordering</h3>
               <p className="text-sm md:text-base text-gray-400 leading-relaxed">Order from multiple restaurants in a single cart. No more separate orders.</p>
             </div>
 
@@ -302,7 +302,7 @@ export default function Home() {
               <div className="p-3 md:p-4 bg-navy-950 border border-white/10 group-hover:border-peach-500/30 transition-colors mb-4 md:mb-6 rounded-none shadow-lg">
                 <MapPin className="w-8 h-8 md:w-10 md:h-10 text-peach-500 group-hover:scale-110 transition-transform duration-300" />
               </div>
-              <h3 className="text-lg md:text-xl font-bold text-white mb-2 md:mb-3 group-hover:text-peach-400 transition-colors">Live Order Tracking</h3>
+              <h3 className="text-base sm:text-lg md:text-xl font-bold text-white mb-2 md:mb-3 group-hover:text-peach-400 transition-colors">Live Order Tracking</h3>
               <p className="text-sm md:text-base text-gray-400 leading-relaxed">Track your food in real-time from preparation to pickup.</p>
             </div>
 
@@ -310,7 +310,7 @@ export default function Home() {
               <div className="p-3 md:p-4 bg-navy-950 border border-white/10 group-hover:border-peach-500/30 transition-colors mb-4 md:mb-6 rounded-none shadow-lg">
                 <Award className="w-8 h-8 md:w-10 md:h-10 text-peach-500 group-hover:scale-110 transition-transform duration-300" />
               </div>
-              <h3 className="text-lg md:text-xl font-bold text-white mb-2 md:mb-3 group-hover:text-peach-400 transition-colors">Exclusive Deals</h3>
+              <h3 className="text-base sm:text-lg md:text-xl font-bold text-white mb-2 md:mb-3 group-hover:text-peach-400 transition-colors">Exclusive Deals</h3>
               <p className="text-sm md:text-base text-gray-400 leading-relaxed">Get the best offers and discounts from your favorite restaurants.</p>
             </div>
           </div>

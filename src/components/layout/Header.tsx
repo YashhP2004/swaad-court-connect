@@ -42,8 +42,8 @@ export function Header({ onMenuClick, showMenuButton = false }: HeaderProps) {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-navy-950/80 backdrop-blur-md shadow-lg shadow-black/20">
-      <div className="container mx-auto px-4">
-        <div className="flex h-20 items-center justify-between">
+      <div className="container mx-auto px-3 sm:px-4">
+        <div className="flex h-16 sm:h-20 items-center justify-between">
           {/* Left Section */}
           <div className="flex items-center gap-4">
             {showMenuButton && (
@@ -57,11 +57,11 @@ export function Header({ onMenuClick, showMenuButton = false }: HeaderProps) {
               </Button>
             )}
 
-            <Link to="/" className="flex items-center gap-3 group">
-              <div className="w-10 h-10 bg-gradient-to-br from-peach-500 to-peach-600 rounded-xl flex items-center justify-center shadow-lg shadow-peach-500/20 group-hover:scale-105 transition-transform">
-                <span className="text-navy-950 font-extrabold text-xl">S</span>
+            <Link to="/" className="flex items-center gap-2 sm:gap-3 group">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-peach-500 to-peach-600 rounded-xl flex items-center justify-center shadow-lg shadow-peach-500/20 group-hover:scale-105 transition-transform">
+                <span className="text-navy-950 font-extrabold text-lg sm:text-xl">S</span>
               </div>
-              <span className="font-heading font-bold text-2xl text-white tracking-tight group-hover:text-peach-400 transition-colors">
+              <span className="font-heading font-bold text-xl sm:text-2xl text-white tracking-tight group-hover:text-peach-400 transition-colors">
                 Swaad<span className="text-peach-500">Court</span>
               </span>
             </Link>
@@ -117,13 +117,13 @@ export function Header({ onMenuClick, showMenuButton = false }: HeaderProps) {
           </nav>
 
           {/* Right Section */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Search */}
             <Button
               variant="ghost"
               size="icon-sm"
               asChild
-              className="text-gray-300 hover:text-peach-400 hover:bg-white/5"
+              className="text-gray-300 hover:text-peach-400 hover:bg-white/5 h-10 w-10 sm:h-auto sm:w-auto"
             >
               <Link to="/search">
                 <Search className="h-5 w-5" />
@@ -136,7 +136,7 @@ export function Header({ onMenuClick, showMenuButton = false }: HeaderProps) {
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  className="relative text-gray-300 hover:text-peach-400 hover:bg-white/5"
+                  className="relative text-gray-300 hover:text-peach-400 hover:bg-white/5 h-10 w-10 sm:h-auto sm:w-auto"
                 >
                   <motion.div
                     whileHover={{ scale: 1.1 }}
@@ -221,7 +221,7 @@ function CartSidebar() {
 
   if (items.length === 0) {
     return (
-      <SheetContent side="right" className="w-full sm:max-w-md">
+      <SheetContent side="right" className="w-full sm:max-w-md p-4 sm:p-6">
         <SheetHeader className="text-left">
           <SheetTitle>Your Cart</SheetTitle>
         </SheetHeader>
@@ -250,7 +250,7 @@ function CartSidebar() {
   }
 
   return (
-    <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+    <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto p-4 sm:p-6">
       <SheetHeader className="text-left">
         <SheetTitle>Your Cart</SheetTitle>
       </SheetHeader>
@@ -267,9 +267,9 @@ function CartSidebar() {
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
-                  className="flex gap-3 p-3 border rounded-lg group hover:shadow-sm transition-all"
+                  className="flex gap-3 p-3 sm:p-4 border rounded-lg group hover:shadow-sm transition-all"
                 >
-                  <div className="relative min-w-[60px] h-[60px] rounded-md overflow-hidden">
+                  <div className="relative min-w-[70px] h-[70px] sm:min-w-[60px] sm:h-[60px] rounded-md overflow-hidden">
                     <img
                       src={item.image}
                       alt={item.name}
@@ -300,26 +300,26 @@ function CartSidebar() {
                           size="icon-sm"
                           onClick={() => updateQuantity(item.uniqueId, Math.max(1, item.quantity - 1))}
                           disabled={item.quantity <= 1}
-                          className="h-6 w-6 rounded-full"
+                          className="h-8 w-8 sm:h-6 sm:w-6 rounded-full"
                         >
-                          <Minus className="h-3 w-3" />
+                          <Minus className="h-4 w-4 sm:h-3 sm:w-3" />
                         </Button>
-                        <span className="text-sm font-medium w-4 text-center">{item.quantity}</span>
+                        <span className="text-sm font-medium w-6 sm:w-4 text-center">{item.quantity}</span>
                         <Button
                           variant="outline"
                           size="icon-sm"
                           onClick={() => updateQuantity(item.uniqueId, item.quantity + 1)}
-                          className="h-6 w-6 rounded-full"
+                          className="h-8 w-8 sm:h-6 sm:w-6 rounded-full"
                         >
-                          <Plus className="h-3 w-3" />
+                          <Plus className="h-4 w-4 sm:h-3 sm:w-3" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon-sm"
                           onClick={() => removeItem(item.uniqueId)}
-                          className="h-6 w-6 text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+                          className="h-8 w-8 sm:h-6 sm:w-6 text-destructive hover:text-destructive/90 hover:bg-destructive/10"
                         >
-                          <Trash2 className="h-3 w-3" />
+                          <Trash2 className="h-4 w-4 sm:h-3 sm:w-3" />
                         </Button>
                       </div>
                     </div>
@@ -331,7 +331,7 @@ function CartSidebar() {
         ))}
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 p-4 bg-background border-t">
+      <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 bg-background border-t">
         <div className="space-y-2 mb-4">
           <div className="flex justify-between text-sm">
             <span>Subtotal</span>

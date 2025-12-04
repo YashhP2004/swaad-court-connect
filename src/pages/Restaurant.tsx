@@ -200,10 +200,10 @@ export default function Restaurant() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-warm">
+    <div className="min-h-screen bg-gradient-warm overflow-x-hidden max-w-[100vw]">
       {/* Header with Cover Image */}
       <motion.div
-        className="relative h-64 overflow-hidden"
+        className="relative h-48 sm:h-56 md:h-64 overflow-hidden"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -222,7 +222,7 @@ export default function Restaurant() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <Button variant="secondary" size="sm" className="bg-white/20 backdrop-blur-sm" asChild>
+          <Button variant="secondary" size="sm" className="bg-white/20 backdrop-blur-sm text-sm" asChild>
             <Link to="/restaurants">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back
@@ -237,10 +237,10 @@ export default function Restaurant() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <Button variant="secondary" size="sm" className="bg-white/20 backdrop-blur-sm">
+          <Button variant="secondary" size="sm" className="bg-white/20 backdrop-blur-sm h-9 w-9 sm:h-auto sm:w-auto p-2">
             <Heart className="h-4 w-4" />
           </Button>
-          <Button variant="secondary" size="sm" className="bg-white/20 backdrop-blur-sm">
+          <Button variant="secondary" size="sm" className="bg-white/20 backdrop-blur-sm h-9 w-9 sm:h-auto sm:w-auto p-2">
             <Share2 className="h-4 w-4" />
           </Button>
         </motion.div>
@@ -267,7 +267,7 @@ export default function Restaurant() {
           </div>
 
           {/* Category Filter */}
-          <div className="flex gap-2 overflow-x-auto pb-2">
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-3 sm:mx-0 px-3 sm:px-0">
             {categories.map((category, index) => (
               <motion.div
                 key={category}
@@ -290,7 +290,7 @@ export default function Restaurant() {
       </motion.div>
 
       {/* Menu Items */}
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-full overflow-x-hidden">
         <motion.div
           className="space-y-6"
           initial="hidden"
@@ -313,17 +313,17 @@ export default function Restaurant() {
               transition={{ duration: 0.5 }}
             >
               <Card
-                className="group hover:shadow-lg transition-shadow duration-300 border-0 shadow-food"
+                className="group hover:shadow-lg transition-shadow duration-300 border-0 shadow-food cursor-pointer"
                 onClick={() => setSelectedItem(item)}
               >
-                <CardContent className="p-4">
+                <CardContent className="p-3 sm:p-4">
                   <div className="flex gap-4">
                     <div className="flex-1">
                       <div className="flex items-start gap-2 mb-2">
                         <VegNonVegIndicator isVeg={item.isVeg} />
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold text-lg">{item.name}</h3>
+                            <h3 className="font-semibold text-base sm:text-lg">{item.name}</h3>
                             {item.isPopular && (
                               <Badge variant="destructive" className="text-xs animate-pulse">
                                 <Award className="h-3 w-3 mr-1" />
@@ -360,7 +360,7 @@ export default function Restaurant() {
                           <p className="text-sm text-muted-foreground mb-3">{item.description}</p>
 
                           <div className="flex items-center justify-between">
-                            <span className="text-xl font-bold text-primary">₹{item.price}</span>
+                            <span className="text-lg sm:text-xl font-bold text-primary">₹{item.price}</span>
 
                             <Button
                               variant="default"
@@ -379,7 +379,7 @@ export default function Restaurant() {
                       </div>
                     </div>
 
-                    <div className="relative w-24 h-24 rounded-lg overflow-hidden">
+                    <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden flex-shrink-0">
                       <img
                         src={item.image}
                         alt={item.name}
@@ -401,7 +401,7 @@ export default function Restaurant() {
         setSpecialInstructions('');
         setQuantity(1);
       }}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <VegNonVegIndicator isVeg={selectedItem?.isVeg || false} />
@@ -560,18 +560,18 @@ export default function Restaurant() {
             )}
 
             {/* Quantity and Add to Cart */}
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2 bg-muted rounded-lg p-1">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
+              <div className="flex items-center gap-2 bg-muted rounded-lg p-1 justify-center sm:justify-start">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 w-8 p-0"
+                  className="h-10 w-10 sm:h-8 sm:w-8 p-0"
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
                   disabled={quantity <= 1}
                 >
                   <Minus className="h-4 w-4" />
                 </Button>
-                <span className="text-sm font-medium w-6 text-center">{quantity}</span>
+                <span className="text-sm font-medium w-8 sm:w-6 text-center">{quantity}</span>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -583,11 +583,11 @@ export default function Restaurant() {
               </div>
 
               <Button
-                className="flex-1 ripple-effect"
+                className="flex-1 ripple-effect text-sm sm:text-base"
                 onClick={handleAddToCart}
               >
                 <Utensils className="h-4 w-4 mr-2" />
-                Add to Cart • ₹{selectedItem ? (selectedItem.price * quantity) : 0}
+                Add to Cart • ₹{selectedItem ? (selectedItem.price * quantity).toFixed(0) : 0}
               </Button>
             </div>
           </div>

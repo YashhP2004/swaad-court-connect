@@ -79,10 +79,10 @@ export default function Cart() {
 
   if (items.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-warm flex flex-col">
+      <div className="min-h-screen bg-gradient-warm flex flex-col overflow-x-hidden max-w-[100vw]">
         {/* Header */}
         <div className="bg-background/80 backdrop-blur-sm border-b sticky top-0 z-10">
-          <div className="container mx-auto px-4 py-4">
+          <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="sm" asChild>
                 <Link to="/">
@@ -90,7 +90,7 @@ export default function Cart() {
                   Back
                 </Link>
               </Button>
-              <h1 className="text-xl font-heading font-bold">Your Cart</h1>
+              <h1 className="text-lg sm:text-xl font-heading font-bold">Your Cart</h1>
             </div>
           </div>
         </div>
@@ -116,7 +116,7 @@ export default function Cart() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-warm">
+    <div className="min-h-screen bg-gradient-warm overflow-x-hidden max-w-[100vw]">
       {/* Header */}
       <div className="bg-background/80 backdrop-blur-sm border-b sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
@@ -129,7 +129,7 @@ export default function Cart() {
                 </Link>
               </Button>
               <div>
-                <h1 className="text-xl font-heading font-bold">Your Cart</h1>
+                <h1 className="text-lg sm:text-xl font-heading font-bold">Your Cart</h1>
                 <p className="text-sm text-muted-foreground">
                   {getTotalItems()} items from {Object.keys(itemsByRestaurant).length} restaurant{Object.keys(itemsByRestaurant).length > 1 ? 's' : ''}
                 </p>
@@ -141,7 +141,7 @@ export default function Cart() {
                 variant="outline"
                 size="sm"
                 onClick={clearCart}
-                className="text-destructive hover:text-destructive"
+                className="text-destructive hover:text-destructive text-xs sm:text-sm"
               >
                 <Trash2 className="h-4 w-4 mr-2" />
                 Clear All
@@ -151,8 +151,8 @@ export default function Cart() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-6">
-        <div className="grid lg:grid-cols-3 gap-6">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6">
+        <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Cart Items */}
           <div className="lg:col-span-2 space-y-6">
             {Object.entries(itemsByRestaurant).map(([restaurantId, restaurant], index) => (
@@ -176,8 +176,8 @@ export default function Cart() {
                 <CardContent className="space-y-4">
                   {restaurant.items.map((item, itemIndex) => (
                     <div key={`${item.id}-${itemIndex}`}>
-                      <div className="flex items-center gap-4">
-                        <div className="relative w-16 h-16 rounded-lg overflow-hidden">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+                        <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-lg overflow-hidden flex-shrink-0">
                           {item.image && (
                             <img
                               src={item.image}
@@ -187,12 +187,12 @@ export default function Cart() {
                           )}
                         </div>
 
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                           <div className="flex items-start gap-2 mb-1">
                             <VegNonVegIndicator isVeg={item.isVeg} size="sm" />
-                            <h3 className="font-medium">{item.name}</h3>
+                            <h3 className="font-medium text-sm sm:text-base truncate">{item.name}</h3>
                           </div>
-                          <p className="text-sm font-bold text-primary">₹{item.price}</p>
+                          <p className="text-xs sm:text-sm font-bold text-primary">₹{item.price}</p>
                           {item.specialInstructions && (
                             <p className="text-sm text-muted-foreground mt-1">
                               Note: {item.specialInstructions}
@@ -200,23 +200,23 @@ export default function Cart() {
                           )}
                         </div>
 
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-2 bg-muted rounded-lg p-1">
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
+                          <div className="flex items-center gap-2 bg-muted rounded-lg p-1 justify-center">
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 w-8 p-0"
+                              className="h-9 w-9 sm:h-8 sm:w-8 p-0"
                               onClick={() => updateQuantity(item.uniqueId, item.quantity - 1)}
                             >
                               <Minus className="h-4 w-4" />
                             </Button>
-                            <span className="text-sm font-medium w-6 text-center">
+                            <span className="text-sm font-medium w-8 sm:w-6 text-center">
                               {item.quantity}
                             </span>
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 w-8 p-0"
+                              className="h-9 w-9 sm:h-8 sm:w-8 p-0"
                               onClick={() => updateQuantity(item.uniqueId, item.quantity + 1)}
                             >
                               <Plus className="h-4 w-4" />
@@ -226,7 +226,7 @@ export default function Cart() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                            className="h-9 w-9 sm:h-8 sm:w-8 p-0 text-destructive hover:text-destructive"
                             onClick={() => removeItem(item.uniqueId)}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -246,7 +246,7 @@ export default function Cart() {
 
           {/* Order Summary */}
           <div className="lg:col-span-1">
-            <Card className="border-0 shadow-warm sticky top-24 animate-fade-in animation-delay-300">
+            <Card className="border-0 shadow-warm sticky top-20 sm:top-24 animate-fade-in animation-delay-300">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <CreditCard className="h-5 w-5 text-primary" />

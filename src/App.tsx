@@ -26,9 +26,9 @@ import AdminSetup from "./pages/AdminSetup";
 const queryClient = new QueryClient();
 
 const AppLayout = ({ children }: { children: React.ReactNode }) => (
-  <div className="min-h-screen bg-background">
+  <div className="min-h-screen bg-background overflow-x-hidden">
     <Header />
-    <main className="pb-20 md:pb-0">
+    <main className="pb-20 md:pb-0 overflow-x-hidden">
       {children}
     </main>
     <BottomNav />

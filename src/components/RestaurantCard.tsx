@@ -64,7 +64,7 @@ export const RestaurantCard = ({ restaurant }: RestaurantCardProps) => {
           </div>
 
           {/* Image Container */}
-          <div className="relative h-64 overflow-hidden">
+          <div className="relative h-48 sm:h-56 md:h-64 overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-t from-navy-900 via-navy-900/40 to-transparent z-10" />
             <img
               src={restaurant.image || '/placeholder-restaurant.jpg'}
